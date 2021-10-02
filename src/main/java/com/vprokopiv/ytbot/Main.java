@@ -11,7 +11,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -20,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("InfiniteLoopStatement")
@@ -34,6 +38,7 @@ public class Main {
             .orElse(2);
 
     private static final Duration DURATION = Duration.ofHours(CHECK_INTERVAL_HRS);
+    public static final String LAST_RUN_FILE = "last-run.txt";
 
     public static void main(String[] args)
             throws GeneralSecurityException, IOException, InterruptedException {
@@ -53,8 +58,8 @@ public class Main {
         while (true) {
             LOG.info("Updating...");
 
-            if (notDaytime()) {
-                LOG.info("Not active hours, skipping");
+            if (notDaytime() || !runRequired()) { // Save some YT API credits
+                LOG.info("Not active hours or last run was recently, skipping");
                 sleep();
                 continue;
             }
@@ -87,7 +92,36 @@ public class Main {
 
             LOG.info("Done.");
 
+            saveLastRunTime();
+
             sleep();
+        }
+    }
+
+    private static void saveLastRunTime() {
+        String localDir = System.getProperty("user.home") + "/" + Config.getRequiredProperty("local-dir");
+        File lastCheck = new File(localDir, LAST_RUN_FILE);
+        try (FileWriter fw = new FileWriter(lastCheck)) {
+            fw.write(String.valueOf(System.currentTimeMillis()));
+        } catch (IOException e) {
+            LOG.warn(e.getMessage(), e);
+        }
+    }
+
+    private static boolean runRequired() {
+        String localDir = System.getProperty("user.home") + "/" + Config.getRequiredProperty("local-dir");
+        File lastCheck = new File(localDir, LAST_RUN_FILE);
+        if (!lastCheck.exists()) {
+            return true;
+        }
+
+        try {
+            var content = Files.lines(lastCheck.toPath()).collect(Collectors.joining());
+            var ts = Long.parseLong(content.trim());
+            return ts < System.currentTimeMillis() - DURATION.toMillis();
+        } catch (IOException e) {
+            LOG.warn(e.getMessage(), e);
+            return true;
         }
     }
 

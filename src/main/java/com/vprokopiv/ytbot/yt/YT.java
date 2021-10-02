@@ -44,7 +44,7 @@ public class YT {
 
     private static final String APPLICATION_NAME = "Bot Client 1";
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-    private static final String CREDENTIALS_DIRECTORY = ".oauth-credentials";
+    private static final String CREDENTIALS_DIRECTORY = Config.getRequiredProperty("local-dir");
     private static final String BOT_WL_PLAYLIST_ID = Config.getRequiredProperty("yt.playlist-id");
     public static final String HOST = Config.getProperty("yt.oauth.host").orElse("localhost");
     public static final int PORT = Config.getProperty("yt.oauth.port")
@@ -72,7 +72,7 @@ public class YT {
         GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
         // Build flow and trigger user authorization request.
-        FileDataStoreFactory fileDataStoreFactory = new FileDataStoreFactory(new File(System.getProperty("user.home") + "/" + CREDENTIALS_DIRECTORY));
+        FileDataStoreFactory fileDataStoreFactory = new FileDataStoreFactory(new File(System.getProperty("user.home"), CREDENTIALS_DIRECTORY));
         DataStore<StoredCredential> datastore = fileDataStoreFactory.getDataStore(DATASTORE);
 
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
