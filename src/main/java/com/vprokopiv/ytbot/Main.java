@@ -1,0 +1,141 @@
+package com.vprokopiv.ytbot;
+
+import com.google.api.client.util.DateTime;
+import com.google.api.services.youtube.YouTube;
+import com.google.api.services.youtube.model.*;
+import com.pengrad.telegrambot.request.SendMessage;
+import com.vprokopiv.ytbot.tg.TG;
+import com.vprokopiv.ytbot.yt.Channel;
+import com.vprokopiv.ytbot.yt.Vid;
+import com.vprokopiv.ytbot.yt.YT;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.*;
+import java.util.stream.Stream;
+
+@SuppressWarnings("InfiniteLoopStatement")
+public class Main {
+    private static final Logger LOG = LogManager.getLogger(Main.class);
+
+    public static final BlockingQueue<SendMessage> tgMessagesQueue = new ArrayBlockingQueue<>(100);
+    public static final BlockingQueue<String> addToWlQueue = new ArrayBlockingQueue<>(100);
+
+    private static final int CHECK_INTERVAL_HRS = Config.getProperty("check-interval-hrs")
+            .map(Integer::parseInt)
+            .orElse(2);
+
+    private static final Duration DURATION = Duration.ofHours(CHECK_INTERVAL_HRS);
+
+    public static void main(String[] args)
+            throws GeneralSecurityException, IOException, InterruptedException {
+        TG tg = TG.getInstance(id -> {
+            try {
+                addToWlQueue.put(id);
+            } catch (InterruptedException e) {
+                LOG.error(e.getMessage(), e);
+                throw new RuntimeException(e);
+            }
+        });
+
+        YT yt = YT.getInstance(message -> {
+            try {
+                tgMessagesQueue.put(new SendMessage(TG.CHAT_ID, message));
+            } catch (InterruptedException e) {
+                LOG.error(e.getMessage(), e);
+                throw new RuntimeException(e);
+            }
+        });
+
+
+        ExecutorService messageQueueWatcher = Executors.newFixedThreadPool(2);
+        messageQueueWatcher.submit(new Thread(() -> {
+            LOG.info("Starting TG message queue checker");
+            while (true) {
+                try {
+                    SendMessage msg = tgMessagesQueue.take();
+                    LOG.debug("Got a message");
+                    tg.sendMessage(msg);
+                } catch (InterruptedException e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, "TgQueueWatcher"));
+
+        messageQueueWatcher.submit(new Thread(() -> {
+            LOG.info("Starting add to WL queue checker");
+            while (true) {
+                try {
+                    String id = addToWlQueue.take();
+                    LOG.debug("Got a message");
+                    yt.addToWL(id);
+                } catch (InterruptedException | IOException e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        }, "AddToWlQueueWatcher"));
+
+        while (true) {
+            LOG.info("Updating...");
+
+            if (notDaytime()) {
+                LOG.info("Not active hours, skipping");
+                sleep();
+                continue;
+            }
+
+            DateTime after = DateTime.parseRfc3339(
+                    ZonedDateTime.now().minus(DURATION)
+                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSXXX"))
+            );
+
+            List<Channel> subs = yt.getSubscriptions();
+            LOG.info("Got {} subscriptions", subs.size());
+
+            Stream<Activity> activities = subs.parallelStream().flatMap(channel -> {
+                LOG.info("Checking {}\t{}", channel.id(), channel.title());
+                List<Activity> channelActivities = yt.getActivities(channel.id(), after);
+                return channelActivities.stream();
+            });
+
+            Comparator<Activity> activityComparator = Comparator.comparing(a -> a.getSnippet()
+                    .getPublishedAt().getValue());
+
+            List<Vid> vids = activities
+                    .sorted(activityComparator)
+                    .filter(a -> "upload".equals(a.getSnippet().getType()))
+                    .map(activity -> new Vid(
+                            activity.getContentDetails().getUpload().getVideoId(),
+                            activity.getSnippet().getTitle()))
+                    .toList();
+
+            LOG.info("Got {} vids", vids.size());
+
+            tg.sendVideos(vids);
+
+            LOG.info("Done.");
+
+            sleep();
+        }
+    }
+
+    private static boolean notDaytime() {
+        var hour = LocalDateTime.now().getHour();
+        return hour < 9;
+    }
+
+    private static void sleep() throws InterruptedException {
+        Thread.sleep(DURATION.toMillis());
+    }
+}
+
+
