@@ -112,6 +112,7 @@
                             <goal>single</goal>
                         </goals>
                         <configuration>
+                            <finalName>ytbot</finalName>
                             <archive>
                                 <manifest>
                                     <mainClass>com.vprokopiv.ytbot.Main</mainClass>
@@ -120,6 +121,7 @@
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
                             </descriptorRefs>
+                            <appendAssemblyId>false</appendAssemblyId>
                         </configuration>
                     </execution>
                 </executions>
