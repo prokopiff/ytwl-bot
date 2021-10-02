@@ -1,7 +1,6 @@
 package com.vprokopiv.ytbot;
 
 import com.google.api.client.util.DateTime;
-import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.tg.TG;
@@ -10,6 +9,7 @@ import com.vprokopiv.ytbot.yt.Vid;
 import com.vprokopiv.ytbot.yt.YT;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -19,7 +19,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.stream.Stream;
 
@@ -38,52 +37,19 @@ public class Main {
 
     public static void main(String[] args)
             throws GeneralSecurityException, IOException, InterruptedException {
-        TG tg = TG.getInstance(id -> {
-            try {
-                addToWlQueue.put(id);
-            } catch (InterruptedException e) {
-                LOG.error(e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
-        });
 
-        YT yt = YT.getInstance(message -> {
-            try {
-                tgMessagesQueue.put(new SendMessage(TG.CHAT_ID, message));
-            } catch (InterruptedException e) {
-                LOG.error(e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
-        });
+        TG tg = TG.getInstance(Main::handleAddToWL);
 
+        YT yt = YT.getInstance(Main::handleMessage);
 
         ExecutorService messageQueueWatcher = Executors.newFixedThreadPool(2);
-        messageQueueWatcher.submit(new Thread(() -> {
-            LOG.info("Starting TG message queue checker");
-            while (true) {
-                try {
-                    SendMessage msg = tgMessagesQueue.take();
-                    LOG.debug("Got a message");
-                    tg.sendMessage(msg);
-                } catch (InterruptedException e) {
-                    LOG.error(e.getMessage(), e);
-                }
-            }
-        }, "TgQueueWatcher"));
+        messageQueueWatcher.submit(new Thread(tgMessageQueueWatcher(tg), "TgQueueWatcher"));
+        messageQueueWatcher.submit(new Thread(addToWlQueueWatcher(yt), "AddToWlQueueWatcher"));
 
-        messageQueueWatcher.submit(new Thread(() -> {
-            LOG.info("Starting add to WL queue checker");
-            while (true) {
-                try {
-                    String id = addToWlQueue.take();
-                    LOG.debug("Got a message");
-                    yt.addToWL(id);
-                } catch (InterruptedException | IOException e) {
-                    LOG.error(e.getMessage(), e);
-                }
-            }
-        }, "AddToWlQueueWatcher"));
+        mainLoop(tg, yt);
+    }
 
+    private static void mainLoop(TG tg, YT yt) throws InterruptedException, IOException {
         while (true) {
             LOG.info("Updating...");
 
@@ -93,10 +59,7 @@ public class Main {
                 continue;
             }
 
-            DateTime after = DateTime.parseRfc3339(
-                    ZonedDateTime.now().minus(DURATION)
-                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSXXX"))
-            );
+            DateTime after = getCheckTime();
 
             List<Channel> subs = yt.getSubscriptions();
             LOG.info("Got {} subscriptions", subs.size());
@@ -128,6 +91,46 @@ public class Main {
         }
     }
 
+    @NotNull
+    private static DateTime getCheckTime() {
+        return DateTime.parseRfc3339(
+                ZonedDateTime.now().minus(DURATION)
+                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSXXX"))
+        );
+    }
+
+    @NotNull
+    private static Runnable addToWlQueueWatcher(YT yt) {
+        return () -> {
+            LOG.info("Starting add to WL queue checker");
+            while (true) {
+                try {
+                    String id = addToWlQueue.take();
+                    LOG.debug("Got a message");
+                    yt.addToWL(id);
+                } catch (InterruptedException | IOException e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        };
+    }
+
+    @NotNull
+    private static Runnable tgMessageQueueWatcher(TG tg) {
+        return () -> {
+            LOG.info("Starting TG message queue checker");
+            while (true) {
+                try {
+                    SendMessage msg = tgMessagesQueue.take();
+                    LOG.debug("Got a message");
+                    tg.sendMessage(msg);
+                } catch (InterruptedException e) {
+                    LOG.error(e.getMessage(), e);
+                }
+            }
+        };
+    }
+
     private static boolean notDaytime() {
         var hour = LocalDateTime.now().getHour();
         return hour < 9;
@@ -135,6 +138,24 @@ public class Main {
 
     private static void sleep() throws InterruptedException {
         Thread.sleep(DURATION.toMillis());
+    }
+
+    private static void handleAddToWL(String id) {
+        try {
+            addToWlQueue.put(id);
+        } catch (InterruptedException e) {
+            LOG.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void handleMessage(String message) {
+        try {
+            tgMessagesQueue.put(new SendMessage(TG.CHAT_ID, message));
+        } catch (InterruptedException e) {
+            LOG.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 }
 
