@@ -1,11 +1,11 @@
 package com.vprokopiv.ytbot;
 
 import com.google.api.client.util.DateTime;
-import com.google.api.services.youtube.model.*;
+import com.google.api.services.youtube.model.Activity;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.tg.TG;
-import com.vprokopiv.ytbot.yt.Channel;
-import com.vprokopiv.ytbot.yt.Vid;
+import com.vprokopiv.ytbot.yt.model.Channel;
+import com.vprokopiv.ytbot.yt.model.Vid;
 import com.vprokopiv.ytbot.yt.YT;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +14,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
@@ -22,7 +24,10 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,8 +35,8 @@ import java.util.stream.Stream;
 public class Main {
     private static final Logger LOG = LogManager.getLogger(Main.class);
 
-    public static final BlockingQueue<SendMessage> tgMessagesQueue = new ArrayBlockingQueue<>(100);
-    public static final BlockingQueue<String> addToWlQueue = new ArrayBlockingQueue<>(100);
+    private static final BlockingQueue<SendMessage> tgMessagesQueue = new ArrayBlockingQueue<>(20);
+    private static final BlockingQueue<String> addToWlQueue = new ArrayBlockingQueue<>(20);
 
     private static final int CHECK_INTERVAL_HRS = Config.getProperty("check-interval-hrs")
             .map(Integer::parseInt)
@@ -54,48 +59,60 @@ public class Main {
         mainLoop(tg, yt);
     }
 
-    private static void mainLoop(TG tg, YT yt) throws InterruptedException, IOException {
+    private static void mainLoop(TG tg, YT yt) throws InterruptedException {
         while (true) {
-            LOG.info("Updating...");
+            try {
+                LOG.info("Updating...");
 
-            if (notDaytime() || !runRequired()) { // Save some YT API credits
-                LOG.info("Not active hours or last run was recently, skipping");
+                if (notDaytime() || !runRequired()) { // Save some YT API credits
+                    LOG.info("Not active hours or last run was recently, skipping");
+                    sleep();
+                    continue;
+                }
+
+                DateTime after = getCheckTime();
+
+                List<Channel> subs = yt.getSubscriptions();
+                LOG.info("Got {} subscriptions", subs.size());
+
+                Stream<Activity> activities = subs.parallelStream().flatMap(channel -> {
+                    LOG.info("Checking {}\t{}", channel.id(), channel.title());
+                    List<Activity> channelActivities = yt.getActivities(channel.id(), after);
+                    return channelActivities.stream();
+                });
+
+                Comparator<Activity> activityComparator = Comparator.comparing(a -> a.getSnippet()
+                        .getPublishedAt().getValue());
+
+                List<Vid> vids = activities
+                        .sorted(activityComparator)
+                        .filter(a -> "upload".equals(a.getSnippet().getType()))
+                        .map(activity -> new Vid(
+                                activity.getContentDetails().getUpload().getVideoId(),
+                                activity.getSnippet().getTitle()))
+                        .toList();
+
+                LOG.info("Got {} vids", vids.size());
+
+                tg.sendVideos(vids);
+
+                LOG.info("Done.");
+
+                saveLastRunTime();
+
                 sleep();
-                continue;
+            } catch (Exception e) {
+                tgMessagesQueue.put(TG.sendMessageOf(stringStackTrace(e)));
             }
-
-            DateTime after = getCheckTime();
-
-            List<Channel> subs = yt.getSubscriptions();
-            LOG.info("Got {} subscriptions", subs.size());
-
-            Stream<Activity> activities = subs.parallelStream().flatMap(channel -> {
-                LOG.info("Checking {}\t{}", channel.id(), channel.title());
-                List<Activity> channelActivities = yt.getActivities(channel.id(), after);
-                return channelActivities.stream();
-            });
-
-            Comparator<Activity> activityComparator = Comparator.comparing(a -> a.getSnippet()
-                    .getPublishedAt().getValue());
-
-            List<Vid> vids = activities
-                    .sorted(activityComparator)
-                    .filter(a -> "upload".equals(a.getSnippet().getType()))
-                    .map(activity -> new Vid(
-                            activity.getContentDetails().getUpload().getVideoId(),
-                            activity.getSnippet().getTitle()))
-                    .toList();
-
-            LOG.info("Got {} vids", vids.size());
-
-            tg.sendVideos(vids);
-
-            LOG.info("Done.");
-
-            saveLastRunTime();
-
-            sleep();
         }
+    }
+
+    @NotNull
+    private static String stringStackTrace(Exception e) {
+        var sw = new StringWriter();
+        var pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        return sw.toString();
     }
 
     private static void saveLastRunTime() {
@@ -115,8 +132,8 @@ public class Main {
             return true;
         }
 
-        try {
-            var content = Files.lines(lastCheck.toPath()).collect(Collectors.joining());
+        try (Stream<String> lines = Files.lines(lastCheck.toPath())) {
+            var content = lines.collect(Collectors.joining());
             var ts = Long.parseLong(content.trim());
             return ts < System.currentTimeMillis() - DURATION.toMillis();
         } catch (IOException e) {
@@ -185,7 +202,7 @@ public class Main {
 
     private static void handleMessage(String message) {
         try {
-            tgMessagesQueue.put(new SendMessage(TG.CHAT_ID, message));
+            tgMessagesQueue.put(TG.sendMessageOf(message));
         } catch (InterruptedException e) {
             LOG.error(e.getMessage(), e);
             throw new RuntimeException(e);

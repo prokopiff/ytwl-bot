@@ -17,17 +17,28 @@ import com.google.api.client.util.DateTime;
 import com.google.api.client.util.store.DataStore;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.youtube.YouTube;
-import com.google.api.services.youtube.model.*;
+import com.google.api.services.youtube.model.Activity;
+import com.google.api.services.youtube.model.ActivityListResponse;
+import com.google.api.services.youtube.model.PlaylistItem;
+import com.google.api.services.youtube.model.PlaylistItemContentDetails;
+import com.google.api.services.youtube.model.PlaylistItemSnippet;
+import com.google.api.services.youtube.model.ResourceId;
+import com.google.api.services.youtube.model.Subscription;
+import com.google.api.services.youtube.model.SubscriptionListResponse;
 import com.vprokopiv.ytbot.Config;
-import com.vprokopiv.ytbot.Main;
+import com.vprokopiv.ytbot.yt.model.Channel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -46,6 +57,9 @@ public class YT {
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
     private static final String CREDENTIALS_DIRECTORY = Config.getRequiredProperty("local-dir");
     private static final String BOT_WL_PLAYLIST_ID = Config.getRequiredProperty("yt.playlist-id");
+    private static final boolean CHECK_WL_DUPLICATES = Config.getProperty("yt.check-wl-duplicates")
+            .map(v -> Set.of("true", "1", "yes").contains(v.toLowerCase()))
+            .orElse(true);
     public static final String HOST = Config.getProperty("yt.oauth.host").orElse("localhost");
     public static final int PORT = Config.getProperty("yt.oauth.port")
             .map(Integer::parseInt)
@@ -108,7 +122,7 @@ public class YT {
                 .build();
     }
 
-    public List<Channel> getSubscriptions() throws IOException {
+    public List<com.vprokopiv.ytbot.yt.model.Channel> getSubscriptions() throws IOException {
         YouTube.Subscriptions.List subsRequest = service.subscriptions()
                 .list("snippet");
 
@@ -161,18 +175,45 @@ public class YT {
     }
 
     public void addToWL(String videoId) throws IOException {
-        LOG.debug("Adding {} to WL", videoId);
-        var snippet = new PlaylistItemSnippet()
-                .setPlaylistId(BOT_WL_PLAYLIST_ID)
-                .setResourceId(new ResourceId()
-                        .setKind("youtube#video")
-                        .setVideoId(videoId)
-                );
+        Set<String> wl = getWl();
+        if (wl.contains(videoId)) {
+            LOG.debug("Already in WL");
+        } else {
+            LOG.debug("Adding {} to WL", videoId);
+            var snippet = new PlaylistItemSnippet()
+                    .setPlaylistId(BOT_WL_PLAYLIST_ID)
+                    .setResourceId(new ResourceId()
+                            .setKind("youtube#video")
+                            .setVideoId(videoId)
+                    );
 
-        var response = service.playlistItems()
-                .insert("snippet", new PlaylistItem().setSnippet(snippet))
-                .execute();
+            var response = service.playlistItems()
+                    .insert("snippet", new PlaylistItem().setSnippet(snippet))
+                    .execute();
 
-        LOG.debug("Response: {}", response);
+            LOG.debug("Response: {}", response);
+        }
+    }
+
+    private Set<String> getWl() throws IOException {
+        if (!CHECK_WL_DUPLICATES) {
+            LOG.debug("Not getting current WL");
+            return Set.of();
+        }
+
+        LOG.debug("Getting current WL");
+        YouTube.PlaylistItems.List requqest = service.playlistItems().list(BOT_WL_PLAYLIST_ID);
+        var response = requqest.execute();
+        List<PlaylistItem> result = new ArrayList<>(response.getItems());
+        while (response.getNextPageToken() != null) {
+            requqest.setPageToken(response.getNextPageToken());
+            response = requqest.execute();
+            result.addAll(response.getItems());
+        }
+        return result
+                .stream()
+                .map(PlaylistItem::getContentDetails)
+                .map(PlaylistItemContentDetails::getVideoId)
+                .collect(Collectors.toSet());
     }
 }

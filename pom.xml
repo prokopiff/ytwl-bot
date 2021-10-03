@@ -50,27 +50,6 @@
             <version>${project.youtube.version}</version>
         </dependency>
 
-        <!-- Required for any code that makes calls to the YouTube Analytics API -->
-        <dependency>
-            <groupId>com.google.apis</groupId>
-            <artifactId>google-api-services-youtubeAnalytics</artifactId>
-            <version>${project.youtube.analytics.version}</version>
-        </dependency>
-
-        <!-- Required for any code that makes calls to the YouTube Reporting API -->
-        <dependency>
-            <groupId>com.google.apis</groupId>
-            <artifactId>google-api-services-youtubereporting</artifactId>
-            <version>${project.youtube.reporting.version}</version>
-        </dependency>
-
-        <!-- This dependency is only used for the Topics API sample, which requires the Jackson JSON parser -->
-        <dependency>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-mapper-asl</artifactId>
-            <version>1.9.11</version>
-        </dependency>
-
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client-jackson2</artifactId>
@@ -82,13 +61,6 @@
             <artifactId>google-oauth-client-jetty</artifactId>
             <version>${project.oauth.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>com.google.collections</groupId>
-            <artifactId>google-collections</artifactId>
-            <version>1.0</version>
-        </dependency>
-
     </dependencies>
 
     <build>

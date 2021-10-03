@@ -1,4 +1,4 @@
-package com.vprokopiv.ytbot.yt;
+package com.vprokopiv.ytbot.yt.model;
 
 public record Vid(String id, String title) {
     public String getUrl() {

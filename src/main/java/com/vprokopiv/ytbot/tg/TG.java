@@ -7,8 +7,7 @@ import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.Config;
-import com.vprokopiv.ytbot.Main;
-import com.vprokopiv.ytbot.yt.Vid;
+import com.vprokopiv.ytbot.yt.model.Vid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,10 +15,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class TG {
-    private static final Logger LOG = LogManager.getLogger(Main.class);
+    private static final Logger LOG = LogManager.getLogger(TG.class);
 
     private static final String TOKEN = Config.getRequiredProperty("bot.token");
-    public static final long CHAT_ID = Long.parseLong(Config.getRequiredProperty("bot.chat-id"));
+    private static final long CHAT_ID = Long.parseLong(Config.getRequiredProperty("bot.chat-id"));
 
     private static TG instance;
 
@@ -61,7 +60,11 @@ public class TG {
     }
     public void sendMessage(String message) {
         LOG.info("Sending message");
-        var msg = new SendMessage(CHAT_ID, message);
+        var msg = sendMessageOf(message);
         sendMessage(msg);
+    }
+
+    public static SendMessage sendMessageOf(String msg) {
+        return new SendMessage(TG.CHAT_ID, msg);
     }
 }

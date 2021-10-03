@@ -11,22 +11,22 @@ import java.util.Properties;
 public class Config {
     private static final Logger LOG = LogManager.getLogger(Config.class);
 
-    private static Properties props;
+    private static final Properties PROPS;
 
     static {
-        props = new Properties();
+        PROPS = new Properties();
         var propsPath = Optional.ofNullable(System.getProperty("app.properties"));
         propsPath.ifPresentOrElse(
                 path -> {
                     try (FileReader fr = new FileReader(path)) {
-                        props.load(fr);
+                        PROPS.load(fr);
                     } catch (IOException e) {
                         LOG.error(e.getMessage(), e);
                     }
                 },
                 () -> {
                     try {
-                        props.load(ClassLoader.getSystemResourceAsStream("app.properties"));
+                        PROPS.load(ClassLoader.getSystemResourceAsStream("app.properties"));
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -38,7 +38,7 @@ public class Config {
 
     public static Optional<String> getProperty(String key) {
         var sys = Optional.ofNullable(System.getProperty(key));
-        return sys.or(() -> Optional.ofNullable(props.getProperty(key)));
+        return sys.or(() -> Optional.ofNullable(PROPS.getProperty(key)));
     }
 
     public static String getRequiredProperty(String key) {
