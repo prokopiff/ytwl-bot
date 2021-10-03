@@ -60,7 +60,7 @@ public class YT {
     private static final boolean CHECK_WL_DUPLICATES = Config.getProperty("yt.check-wl-duplicates")
             .map(v -> Set.of("true", "1", "yes").contains(v.toLowerCase()))
             .orElse(true);
-    public static final String HOST = Config.getProperty("yt.oauth.host").orElse("localhost");
+    public static final String HOST = "localhost";
     public static final int PORT = Config.getProperty("yt.oauth.port")
             .map(Integer::parseInt)
             .orElse(8888);
@@ -105,7 +105,10 @@ public class YT {
             @Override
             protected void onAuthorization(AuthorizationCodeRequestUrl authorizationUrl) throws IOException {
                 LOG.info("Adding URL to message queue");
-                sendMessageHandler.accept(authorizationUrl.build());
+                String serverHost = Config.getProperty("server-host").orElse("localhost");
+                String url = authorizationUrl.build().replace("localhost", serverHost);
+                LOG.warn("Open this link: {}", url);
+                sendMessageHandler.accept(url);
                 super.onAuthorization(authorizationUrl);
             }
         }
