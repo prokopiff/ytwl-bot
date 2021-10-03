@@ -187,11 +187,10 @@ public class YT {
                             .setVideoId(videoId)
                     );
 
-            var response = service.playlistItems()
+            service.playlistItems()
                     .insert("snippet", new PlaylistItem().setSnippet(snippet))
                     .execute();
-
-            LOG.debug("Response: {}", response);
+            LOG.info("WL entry added");
         }
     }
 
@@ -202,7 +201,9 @@ public class YT {
         }
 
         LOG.debug("Getting current WL");
-        YouTube.PlaylistItems.List requqest = service.playlistItems().list(BOT_WL_PLAYLIST_ID);
+        YouTube.PlaylistItems.List requqest = service.playlistItems()
+                .list("snippet,contentDetails")
+                .setPlaylistId(BOT_WL_PLAYLIST_ID);
         var response = requqest.execute();
         List<PlaylistItem> result = new ArrayList<>(response.getItems());
         while (response.getNextPageToken() != null) {
