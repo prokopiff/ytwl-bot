@@ -1,11 +1,6 @@
 package com.vprokopiv.ytbot.yt;
 
-import com.google.api.client.auth.oauth2.AuthorizationCodeRequestUrl;
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.auth.oauth2.StoredCredential;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
@@ -14,7 +9,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 
 import com.google.api.client.util.DateTime;
-import com.google.api.client.util.store.DataStore;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.Activity;
@@ -36,21 +30,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static java.util.Collections.singletonList;
-
 public class YT {
     private static final Logger LOG = LogManager.getLogger(YT.class);
 
     private static final String CLIENT_SECRETS = "client_secrets.json";
-    private static final Collection<String> SCOPES =
-            singletonList("https://www.googleapis.com/auth/youtube");
-    private static final String DATASTORE = "yt_bot";
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
     private static final String APPLICATION_NAME = "Bot Client 1";
@@ -60,10 +48,6 @@ public class YT {
     private static final boolean CHECK_WL_DUPLICATES = Config.getProperty("yt.check-wl-duplicates")
             .map(v -> Set.of("true", "1", "yes").contains(v.toLowerCase()))
             .orElse(true);
-    public static final String HOST = "localhost";
-    public static final int PORT = Config.getProperty("yt.oauth.port")
-            .map(Integer::parseInt)
-            .orElse(8888);
 
     private static YT instance;
     private final YouTube service;
@@ -72,7 +56,8 @@ public class YT {
         this.service = getService(sendMessageHandler);
     }
 
-    public static synchronized YT getInstance(Consumer<String> sendMessageHandler) throws GeneralSecurityException, IOException {
+    public static synchronized YT getInstance(Consumer<String> sendMessageHandler)
+            throws GeneralSecurityException, IOException {
         if (instance == null) {
             instance = new YT(sendMessageHandler);
         }
@@ -86,36 +71,20 @@ public class YT {
         GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
         // Build flow and trigger user authorization request.
-        FileDataStoreFactory fileDataStoreFactory = new FileDataStoreFactory(new File(System.getProperty("user.home"), CREDENTIALS_DIRECTORY));
-        DataStore<StoredCredential> datastore = fileDataStoreFactory.getDataStore(DATASTORE);
+        FileDataStoreFactory fileDataStoreFactory = new FileDataStoreFactory(
+                new File(System.getProperty("user.home"), CREDENTIALS_DIRECTORY));
+        var oauth = new OAuthForDevice(
+                clientSecrets.getDetails().getClientId(),
+                clientSecrets.getDetails().getClientSecret(),
+                HTTP_TRANSPORT,
+                sendMessageHandler,
+                fileDataStoreFactory);
 
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                .setCredentialDataStore(datastore)
-                .build();
-
-        // Build the local server and bind it to port 8080
-        LocalServerReceiver localReceiver = new LocalServerReceiver.Builder()
-                .setHost(HOST)
-                .setPort(PORT)
-                .build();
-
-        // Authorize.
-        return new AuthorizationCodeInstalledApp(flow, localReceiver) {
-            @Override
-            protected void onAuthorization(AuthorizationCodeRequestUrl authorizationUrl) throws IOException {
-                LOG.info("Adding URL to message queue");
-                String serverHost = Config.getProperty("server-host").orElse("localhost");
-                String url = authorizationUrl.build().replace("localhost", serverHost);
-                LOG.warn("Open this link: {}", url);
-                sendMessageHandler.accept(url);
-                super.onAuthorization(authorizationUrl);
-            }
-        }
-        .authorize("user");
+        return oauth.getCredential();
     }
 
-    private static YouTube getService(Consumer<String> sendMessageHandler) throws GeneralSecurityException, IOException {
+    private static YouTube getService(Consumer<String> sendMessageHandler)
+            throws GeneralSecurityException, IOException {
         LOG.debug("Initializing API");
         final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
         Credential credential = authorize(sendMessageHandler);
@@ -204,7 +173,7 @@ public class YT {
         }
 
         LOG.debug("Getting current WL");
-        YouTube.PlaylistItems.List requqest = service.playlistItems()
+        var requqest = service.playlistItems()
                 .list("snippet,contentDetails")
                 .setPlaylistId(BOT_WL_PLAYLIST_ID);
         var response = requqest.execute();
@@ -220,4 +189,5 @@ public class YT {
                 .map(PlaylistItemContentDetails::getVideoId)
                 .collect(Collectors.toSet());
     }
+
 }

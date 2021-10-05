@@ -48,12 +48,11 @@ public class Main {
     public static void main(String[] args)
             throws GeneralSecurityException, IOException, InterruptedException {
 
-        TG tg = TG.getInstance(Main::handleAddToWL);
-
-        YT yt = YT.getInstance(Main::handleMessage);
-
+        var tg = TG.getInstance(Main::handleAddToWL);
         ExecutorService messageQueueWatcher = Executors.newFixedThreadPool(2);
         messageQueueWatcher.submit(new Thread(tgMessageQueueWatcher(tg), "TgQueueWatcher"));
+
+        var yt = YT.getInstance(Main::handleMessage);
         messageQueueWatcher.submit(new Thread(addToWlQueueWatcher(yt), "AddToWlQueueWatcher"));
 
         mainLoop(tg, yt);
@@ -100,9 +99,10 @@ public class Main {
 
                 saveLastRunTime();
 
-                sleep();
             } catch (Exception e) {
                 tgMessagesQueue.put(TG.sendMessageOf(stringStackTrace(e)));
+            } finally {
+                sleep();
             }
         }
     }
@@ -115,13 +115,14 @@ public class Main {
         return sw.toString();
     }
 
-    private static void saveLastRunTime() {
+    private static void saveLastRunTime() throws IOException {
         String localDir = System.getProperty("user.home") + "/" + Config.getRequiredProperty("local-dir");
         File lastCheck = new File(localDir, LAST_RUN_FILE);
         try (FileWriter fw = new FileWriter(lastCheck)) {
             fw.write(String.valueOf(System.currentTimeMillis()));
         } catch (IOException e) {
             LOG.warn(e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -188,6 +189,7 @@ public class Main {
     }
 
     private static void sleep() throws InterruptedException {
+        LOG.info("Sleeping in main loop");
         Thread.sleep(DURATION.toMillis());
     }
 
@@ -209,5 +211,3 @@ public class Main {
         }
     }
 }
-
-
