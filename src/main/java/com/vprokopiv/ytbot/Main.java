@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
@@ -42,7 +43,6 @@ public class Main {
             .map(Integer::parseInt)
             .orElse(2);
 
-    private static final Duration DURATION = Duration.ofHours(CHECK_INTERVAL_HRS);
     public static final String LAST_RUN_FILE = "last-run.txt";
 
     public static void main(String[] args)
@@ -63,12 +63,13 @@ public class Main {
             try {
                 LOG.info("Updating...");
 
-                if (notDaytime() || !runRequired()) { // Save some YT API credits
-                    LOG.info("Not active hours or last run was recently, skipping");
+                if (notDaytime()) { // Save some YT API credits
+                    LOG.info("Not active hours, skipping");
                     continue;
                 }
 
-                DateTime after = getCheckTime();
+                DateTime after = getCheckTime(lastRun());
+                LOG.info("Will get activities after {}", after);
 
                 List<Channel> subs = yt.getSubscriptions();
                 LOG.info("Got {} subscriptions", subs.size());
@@ -126,27 +127,31 @@ public class Main {
         }
     }
 
-    private static boolean runRequired() {
+    private static long lastRun() {
+        LOG.info("Getting last run time");
         String localDir = System.getProperty("user.home") + "/" + Config.getRequiredProperty("local-dir");
-        File lastCheck = new File(localDir, LAST_RUN_FILE);
+        var lastCheck = new File(localDir, LAST_RUN_FILE);
         if (!lastCheck.exists()) {
-            return true;
+            LOG.info("No last check file. Returning 24hrs ago");
+            return System.currentTimeMillis() - Duration.ofHours(24L).toMillis();
         }
 
         try (Stream<String> lines = Files.lines(lastCheck.toPath())) {
             var content = lines.collect(Collectors.joining());
-            var ts = Long.parseLong(content.trim());
-            return ts < System.currentTimeMillis() - DURATION.toMillis();
+            long ts = Long.parseLong(content.trim());
+            LOG.info("Got last run time {}", ts);
+            return ts;
         } catch (IOException e) {
             LOG.warn(e.getMessage(), e);
-            return true;
+            LOG.info("Error reading last check file. Returning 24hrs ago");
+            return System.currentTimeMillis() - Duration.ofHours(24L).toMillis();
         }
     }
 
     @NotNull
-    private static DateTime getCheckTime() {
+    private static DateTime getCheckTime(long lastRunTs) {
         return DateTime.parseRfc3339(
-                ZonedDateTime.now().minus(DURATION)
+                ZonedDateTime.of(LocalDateTime.ofEpochSecond(lastRunTs / 1000, 0, ZoneOffset.UTC), ZoneOffset.UTC)
                         .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSXXX"))
         );
     }
@@ -190,7 +195,7 @@ public class Main {
 
     private static void sleep() throws InterruptedException {
         LOG.info("Sleeping in main loop");
-        Thread.sleep(DURATION.toMillis());
+        Thread.sleep(Duration.ofHours(2).toMillis());
     }
 
     private static void handleAddToWL(String id) {
