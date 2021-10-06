@@ -39,10 +39,6 @@ public class Main {
     private static final BlockingQueue<SendMessage> tgMessagesQueue = new ArrayBlockingQueue<>(20);
     private static final BlockingQueue<String> addToWlQueue = new ArrayBlockingQueue<>(20);
 
-    private static final int CHECK_INTERVAL_HRS = Config.getProperty("check-interval-hrs")
-            .map(Integer::parseInt)
-            .orElse(2);
-
     public static final String LAST_RUN_FILE = "last-run.txt";
 
     public static void main(String[] args)
@@ -101,6 +97,7 @@ public class Main {
                 saveLastRunTime();
 
             } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
                 tgMessagesQueue.put(TG.sendMessageOf(stringStackTrace(e)));
             } finally {
                 sleep();

@@ -25,6 +25,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -67,7 +69,15 @@ public class YT {
     private static Credential authorize(Consumer<String> sendMessageHandler) throws IOException {
         LOG.debug("Authorising");
         // Load client secrets.
-        InputStream in = ClassLoader.getSystemResourceAsStream(CLIENT_SECRETS);
+        var secrets = Config.getProperty("secrets");
+        InputStream in = secrets.map(
+                file -> {
+                    try {
+                        return (InputStream) new FileInputStream(file);
+                    } catch (FileNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).orElseGet(() -> ClassLoader.getSystemResourceAsStream(CLIENT_SECRETS));
         GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
         // Build flow and trigger user authorization request.
