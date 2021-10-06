@@ -1,15 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
+<Configuration status="INFO">
+    <Properties>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} %p %m%n</Property>
+        <Property name="APP_LOG_ROOT">/home/pi/ytbot-logs</Property>
+    </Properties>
+
     <Appenders>
         <Console name="LogToConsole" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
+
+        <RollingFile name="rollingFile" fileName="${APP_LOG_ROOT}/ytbot.log"
+                     filePattern="${APP_LOG_ROOT}/ytbot-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="2048KB" />
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
         <Logger name="com.vprokopiv.ytbot" level="debug" additivity="false">
+            <AppenderRef ref="rollingFile"/>
             <AppenderRef ref="LogToConsole"/>
         </Logger>
         <Root level="info">
+            <AppenderRef ref="rollingFile"/>
             <AppenderRef ref="LogToConsole"/>
         </Root>
     </Loggers>

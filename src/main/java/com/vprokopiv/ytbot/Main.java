@@ -88,7 +88,8 @@ public class Main {
                         .filter(a -> "upload".equals(a.getSnippet().getType()))
                         .map(activity -> new Vid(
                                 activity.getContentDetails().getUpload().getVideoId(),
-                                activity.getSnippet().getTitle()))
+                                activity.getSnippet().getTitle(),
+                                activity.getSnippet().getChannelTitle()))
                         .toList();
 
                 LOG.info("Got {} vids", vids.size());

@@ -49,7 +49,8 @@ public class TG {
         vids.forEach(vid -> {
             var toWlButton = new InlineKeyboardButton("Add to WL")
                     .callbackData(vid.id());
-            var message = new SendMessage(CHAT_ID, vid.getUrl())
+            var message = new SendMessage(CHAT_ID,
+                    "%s\n\n%s".formatted(vid.channel(), vid.getUrl()))
                     .replyMarkup(new InlineKeyboardMarkup(toWlButton));
             bot.execute(message);
         });
