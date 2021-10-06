@@ -65,7 +65,6 @@ public class Main {
 
                 if (notDaytime() || !runRequired()) { // Save some YT API credits
                     LOG.info("Not active hours or last run was recently, skipping");
-                    sleep();
                     continue;
                 }
 
