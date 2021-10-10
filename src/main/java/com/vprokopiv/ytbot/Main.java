@@ -42,6 +42,8 @@ public class Main {
     private static final ZoneOffset ZONE_OFFSET = OffsetDateTime.now().getOffset();
 
     public static final String LAST_RUN_FILE = "last-run.txt";
+    public static final Comparator<Activity> ACTIVITY_COMPARATOR = Comparator.comparing(a -> a.getSnippet()
+            .getPublishedAt().getValue());
 
     public static void main(String[] args)
             throws GeneralSecurityException, IOException, InterruptedException {
@@ -62,13 +64,14 @@ public class Main {
         while (true) {
             try {
                 LOG.info("Updating...");
+                long lastRunTs = lastRun();
 
-                if (notDaytime()) { // Save some YT API credits
+                if (notDaytime() || lastRunTs > System.currentTimeMillis() - Duration.ofHours(2).toMillis()) {
+                    // Save some YT API credits
                     LOG.info("Not active hours, skipping");
                     continue;
                 }
 
-                long lastRunTs = lastRun();
                 DateTime after = getCheckTime(lastRunTs);
                 LOG.info("Will get activities after {}", after);
 
@@ -84,11 +87,8 @@ public class Main {
 
                 var runTs = System.currentTimeMillis();
 
-                Comparator<Activity> activityComparator = Comparator.comparing(a -> a.getSnippet()
-                        .getPublishedAt().getValue());
-
                 List<Vid> vids = activities
-                        .sorted(activityComparator)
+                        .sorted(ACTIVITY_COMPARATOR)
                         .filter(a -> "upload".equals(a.getSnippet().getType()))
                         .map(activity -> new Vid(
                                 activity.getContentDetails().getUpload().getVideoId(),
@@ -100,7 +100,10 @@ public class Main {
 
                 tg.sendVideos(vids);
 
-                String doneMsg = "Done. Run was from %d to %d".formatted(lastRunTs, runTs);
+                String doneMsg = "Done. Run was from %s to %s".formatted(
+                        LocalDateTime.ofEpochSecond(lastRunTs / 1000, 0, ZONE_OFFSET),
+                        LocalDateTime.ofEpochSecond(runTs / 1000, 0, ZONE_OFFSET)
+                );
                 LOG.info(doneMsg);
                 tgMessagesQueue.put(TG.sendMessageOf(doneMsg));
 
