@@ -50,7 +50,7 @@ public class TG {
             var toWlButton = new InlineKeyboardButton("Add to WL")
                     .callbackData(vid.id());
             var message = new SendMessage(CHAT_ID,
-                    "%s\n\n%s".formatted(vid.channel(), vid.getUrl()))
+                    "%s\n%s\n\n%s".formatted(vid.channel(), vid.duration(), vid.getUrl()))
                     .replyMarkup(new InlineKeyboardMarkup(toWlButton));
             bot.execute(message);
         });

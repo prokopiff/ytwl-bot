@@ -26,6 +26,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -93,12 +94,25 @@ public class Main {
                         .map(activity -> new Vid(
                                 activity.getContentDetails().getUpload().getVideoId(),
                                 activity.getSnippet().getTitle(),
-                                activity.getSnippet().getChannelTitle()))
+                                activity.getSnippet().getChannelTitle(),
+                                ""))
                         .toList();
 
                 LOG.info("Got {} vids", vids.size());
+                try {
+                    var ids = vids.stream().map(Vid::id).collect(Collectors.toSet());
+                    Map<String, Duration> durations = yt.getDurations(ids);
+                    vids = vids.stream()
+                            .map(vid -> {
+                                Duration duration = durations.getOrDefault(vid.id(), null);
+                                var durationStr = formatDuration(duration);
 
-                tg.sendVideos(vids);
+                                return new Vid(vid, durationStr);
+                            })
+                            .toList();
+                } finally {
+                    tg.sendVideos(vids);
+                }
 
                 String doneMsg = "Done. Run was from %s to %s".formatted(
                         LocalDateTime.ofEpochSecond(lastRunTs / 1000, 0, ZONE_OFFSET),
@@ -116,6 +130,14 @@ public class Main {
                 sleep();
             }
         }
+    }
+
+    static String formatDuration(Duration duration) {
+        if (duration == null) {
+            return "";
+        }
+        return (duration.toHoursPart() > 0 ? duration.toHoursPart() + ":" : "")
+                + "%02d:%02d".formatted(duration.toMinutesPart(), duration.toSecondsPart());
     }
 
     @NotNull

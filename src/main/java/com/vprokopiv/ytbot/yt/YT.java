@@ -19,6 +19,7 @@ import com.google.api.services.youtube.model.PlaylistItemSnippet;
 import com.google.api.services.youtube.model.ResourceId;
 import com.google.api.services.youtube.model.Subscription;
 import com.google.api.services.youtube.model.SubscriptionListResponse;
+import com.google.api.services.youtube.model.Video;
 import com.vprokopiv.ytbot.Config;
 import com.vprokopiv.ytbot.yt.model.Channel;
 import org.apache.logging.log4j.LogManager;
@@ -31,8 +32,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -200,4 +203,28 @@ public class YT {
                 .collect(Collectors.toSet());
     }
 
+    public Map<String, Duration> getDurations(Set<String> ids) throws IOException {
+        LOG.info("Getting durations for {} videos", ids.size());
+        if (ids.isEmpty()) {
+            return Map.of();
+        } else if (ids.size() > 25) {
+            LOG.warn("Too many video ids to get durations. Getting first 25");
+            return getDurations(ids.stream().limit(25).collect(Collectors.toSet()));
+        }
+
+        var request = service.videos()
+                .list("contentDetails")
+                .setId(String.join(",", ids));
+
+        var response = request.execute();
+        List<Video> result = response.getItems();
+        while (response.getNextPageToken() != null) {
+            request.setPageToken(response.getNextPageToken());
+            response = request.execute();
+            result.addAll(response.getItems());
+        }
+        return result.stream().collect(Collectors.toMap(
+                Video::getId,
+                v -> Duration.parse(v.getContentDetails().getDuration())));
+    }
 }
