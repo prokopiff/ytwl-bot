@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,11 +39,14 @@ public class Main {
 
     private static final BlockingQueue<SendMessage> tgMessagesQueue = new ArrayBlockingQueue<>(20);
     private static final BlockingQueue<String> addToWlQueue = new ArrayBlockingQueue<>(20);
+    private static final ZoneOffset ZONE_OFFSET = OffsetDateTime.now().getOffset();
 
     public static final String LAST_RUN_FILE = "last-run.txt";
 
     public static void main(String[] args)
             throws GeneralSecurityException, IOException, InterruptedException {
+
+        LOG.info("Running with time zone offset {}", ZONE_OFFSET);
 
         var tg = TG.getInstance(Main::handleAddToWL);
         ExecutorService messageQueueWatcher = Executors.newFixedThreadPool(2);
@@ -64,17 +68,21 @@ public class Main {
                     continue;
                 }
 
-                DateTime after = getCheckTime(lastRun());
+                long lastRunTs = lastRun();
+                DateTime after = getCheckTime(lastRunTs);
                 LOG.info("Will get activities after {}", after);
 
                 List<Channel> subs = yt.getSubscriptions();
                 LOG.info("Got {} subscriptions", subs.size());
 
                 Stream<Activity> activities = subs.parallelStream().flatMap(channel -> {
-                    LOG.info("Checking {}\t{}", channel.id(), channel.title());
                     List<Activity> channelActivities = yt.getActivities(channel.id(), after);
+                    var titleLog = getFixedSizeTitle(channel);
+                    LOG.info("Checking {}\t{} - {} updates", channel.id(), titleLog, channelActivities.size());
                     return channelActivities.stream();
                 });
+
+                var runTs = System.currentTimeMillis();
 
                 Comparator<Activity> activityComparator = Comparator.comparing(a -> a.getSnippet()
                         .getPublishedAt().getValue());
@@ -92,9 +100,11 @@ public class Main {
 
                 tg.sendVideos(vids);
 
-                LOG.info("Done.");
+                String doneMsg = "Done. Run was from %d to %d".formatted(lastRunTs, runTs);
+                LOG.info(doneMsg);
+                tgMessagesQueue.put(TG.sendMessageOf(doneMsg));
 
-                saveLastRunTime();
+                saveLastRunTime(runTs);
 
             } catch (Exception e) {
                 LOG.error(e.getMessage(), e);
@@ -106,6 +116,24 @@ public class Main {
     }
 
     @NotNull
+    private static String getFixedSizeTitle(Channel channel) {
+        if (channel.title() == null) {
+            return "NULL";
+        }
+        return channel.title().length() < 15
+                ? lpad(channel.title(), " ", 15)
+                : channel.title().substring(0, 12) + "...";
+    }
+
+    private static String lpad(String val, String pad, int toSize) {
+        StringBuilder valBuilder = new StringBuilder(val);
+        while (valBuilder.length() < toSize) {
+            valBuilder.insert(0, pad);
+        }
+        return valBuilder.toString();
+    }
+
+    @NotNull
     private static String stringStackTrace(Exception e) {
         var sw = new StringWriter();
         var pw = new PrintWriter(sw);
@@ -113,11 +141,11 @@ public class Main {
         return sw.toString();
     }
 
-    private static void saveLastRunTime() throws IOException {
+    private static void saveLastRunTime(long runTs) throws IOException {
         String localDir = System.getProperty("user.home") + "/" + Config.getRequiredProperty("local-dir");
         File lastCheck = new File(localDir, LAST_RUN_FILE);
         try (FileWriter fw = new FileWriter(lastCheck)) {
-            fw.write(String.valueOf(System.currentTimeMillis()));
+            fw.write(String.valueOf(runTs));
         } catch (IOException e) {
             LOG.warn(e.getMessage(), e);
             throw e;
@@ -146,9 +174,9 @@ public class Main {
     }
 
     @NotNull
-    private static DateTime getCheckTime(long lastRunTs) {
+    static DateTime getCheckTime(long lastRunTs) {
         return DateTime.parseRfc3339(
-                ZonedDateTime.of(LocalDateTime.ofEpochSecond(lastRunTs / 1000, 0, ZoneOffset.UTC), ZoneOffset.UTC)
+                ZonedDateTime.of(LocalDateTime.ofEpochSecond(lastRunTs / 1000, 0, ZONE_OFFSET), ZONE_OFFSET)
                         .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSXXX"))
         );
     }
