@@ -119,7 +119,7 @@ public class Main {
                         LocalDateTime.ofEpochSecond(runTs / 1000, 0, ZONE_OFFSET)
                 );
                 LOG.info(doneMsg);
-                tgMessagesQueue.put(TG.sendMessageOf(doneMsg));
+//                tgMessagesQueue.put(TG.sendMessageOf(doneMsg));
 
                 saveLastRunTime(runTs);
 

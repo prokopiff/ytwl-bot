@@ -5,6 +5,7 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.Config;
 import com.vprokopiv.ytbot.yt.model.Vid;
@@ -31,6 +32,9 @@ public class TG {
             updates.forEach(update -> {
                 if (update.callbackQuery() != null) {
                     addToWlHandler.accept(update.callbackQuery().data());
+                    bot.execute(new AnswerCallbackQuery(update.callbackQuery().id())
+                            .text("\u2713") // Checkmark
+                    );
                 }
             });
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
