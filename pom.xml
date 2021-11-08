@@ -10,11 +10,11 @@
     <name>youtube-bot</name>
 
     <properties>
-        <project.youtube.version>v3-rev182-1.22.0</project.youtube.version>
+        <project.youtube.version>v3-rev20210915-1.32.1</project.youtube.version>
         <project.youtube.analytics.version>v1-rev63-1.22.0</project.youtube.analytics.version>
         <project.youtube.reporting.version>v1-rev10-1.22.0</project.youtube.reporting.version>
-        <project.http.version>1.20.0</project.http.version>
-        <project.oauth.version>1.20.0</project.oauth.version>
+        <project.http.version>1.40.1</project.http.version>
+        <project.oauth.version>1.32.1</project.oauth.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -29,7 +29,7 @@
         <dependency>
             <groupId>com.github.pengrad</groupId>
             <artifactId>java-telegram-bot-api</artifactId>
-            <version>5.2.0</version>
+            <version>5.3.0</version>
         </dependency>
 
         <dependency>

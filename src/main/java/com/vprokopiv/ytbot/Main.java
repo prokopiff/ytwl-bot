@@ -45,6 +45,7 @@ public class Main {
     public static final String LAST_RUN_FILE = "last-run.txt";
     public static final Comparator<Activity> ACTIVITY_COMPARATOR = Comparator.comparing(a -> a.getSnippet()
             .getPublishedAt().getValue());
+    public static final long TWENTY_FOUR_HRS = Duration.ofHours(24L).toMillis();
 
     public static void main(String[] args)
             throws GeneralSecurityException, IOException, InterruptedException {
@@ -100,7 +101,7 @@ public class Main {
 
                 LOG.info("Got {} vids", vids.size());
                 try {
-                    var ids = vids.stream().map(Vid::id).collect(Collectors.toSet());
+                    var ids = vids.stream().map(Vid::id).toList();
                     Map<String, Duration> durations = yt.getDurations(ids);
                     vids = vids.stream()
                             .map(vid -> {
@@ -119,7 +120,6 @@ public class Main {
                         LocalDateTime.ofEpochSecond(runTs / 1000, 0, ZONE_OFFSET)
                 );
                 LOG.info(doneMsg);
-//                tgMessagesQueue.put(TG.sendMessageOf(doneMsg));
 
                 saveLastRunTime(runTs);
 
@@ -136,7 +136,7 @@ public class Main {
         if (duration == null) {
             return "";
         }
-        return (duration.toHoursPart() > 0 ? duration.toHoursPart() + ":" : "")
+        return (duration.toHoursPart() > 0 ? (duration.toHoursPart() + ":") : "")
                 + "%02d:%02d".formatted(duration.toMinutesPart(), duration.toSecondsPart());
     }
 
@@ -147,7 +147,7 @@ public class Main {
         }
         return channel.title().length() < 15
                 ? lpad(channel.title(), " ", 15)
-                : channel.title().substring(0, 12) + "...";
+                : (channel.title().substring(0, 12) + "...");
     }
 
     private static String lpad(String val, String pad, int toSize) {
@@ -183,7 +183,7 @@ public class Main {
         var lastCheck = new File(localDir, LAST_RUN_FILE);
         if (!lastCheck.exists()) {
             LOG.info("No last check file. Returning 24hrs ago");
-            return System.currentTimeMillis() - Duration.ofHours(24L).toMillis();
+            return System.currentTimeMillis() - TWENTY_FOUR_HRS;
         }
 
         try (Stream<String> lines = Files.lines(lastCheck.toPath())) {
@@ -194,7 +194,7 @@ public class Main {
         } catch (IOException e) {
             LOG.warn(e.getMessage(), e);
             LOG.info("Error reading last check file. Returning 24hrs ago");
-            return System.currentTimeMillis() - Duration.ofHours(24L).toMillis();
+            return System.currentTimeMillis() - TWENTY_FOUR_HRS;
         }
     }
 

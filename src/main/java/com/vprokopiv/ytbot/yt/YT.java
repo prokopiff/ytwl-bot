@@ -53,6 +53,10 @@ public class YT {
     private static final boolean CHECK_WL_DUPLICATES = Config.getProperty("yt.check-wl-duplicates")
             .map(v -> Set.of("true", "1", "yes").contains(v.toLowerCase()))
             .orElse(true);
+    public static final int GET_LENGTH_TRESHOLD = 25;
+    public static final long PAGE_SIZE = 25L;
+    public static final String CONTENT_DETAILS = "contentDetails";
+    public static final String SNIPPET = "snippet";
 
     private static YT instance;
     private final YouTube service;
@@ -109,7 +113,7 @@ public class YT {
 
     public List<com.vprokopiv.ytbot.yt.model.Channel> getSubscriptions() throws IOException {
         YouTube.Subscriptions.List subsRequest = service.subscriptions()
-                .list("snippet");
+                .list(List.of(SNIPPET));
 
         SubscriptionListResponse response = subsRequest.setMaxResults(500L)
                 .setMine(true)
@@ -135,12 +139,12 @@ public class YT {
 
     public List<Activity> getActivities(String channelId, DateTime after) {
         try {
-            YouTube.Activities.List activitiesRequest = service.activities()
-                    .list("snippet,contentDetails");
+            var activitiesRequest = service.activities()
+                    .list(List.of(SNIPPET, CONTENT_DETAILS));
 
-            ActivityListResponse response = activitiesRequest.setMaxResults(25L)
+            ActivityListResponse response = activitiesRequest.setMaxResults(PAGE_SIZE)
                     .setChannelId(channelId)
-                    .setPublishedAfter(after)
+                    .setPublishedAfter(after.toStringRfc3339())
                     .execute();
 
             List<Activity> result = new ArrayList<>(response.getItems());
@@ -173,7 +177,7 @@ public class YT {
                     );
 
             service.playlistItems()
-                    .insert("snippet", new PlaylistItem().setSnippet(snippet))
+                    .insert(List.of("snippet"), new PlaylistItem().setSnippet(snippet))
                     .execute();
             LOG.info("WL entry added");
         }
@@ -187,7 +191,7 @@ public class YT {
 
         LOG.debug("Getting current WL");
         var requqest = service.playlistItems()
-                .list("snippet,contentDetails")
+                .list(List.of(SNIPPET, CONTENT_DETAILS))
                 .setPlaylistId(BOT_WL_PLAYLIST_ID);
         var response = requqest.execute();
         List<PlaylistItem> result = new ArrayList<>(response.getItems());
@@ -203,18 +207,18 @@ public class YT {
                 .collect(Collectors.toSet());
     }
 
-    public Map<String, Duration> getDurations(Set<String> ids) throws IOException {
+    public Map<String, Duration> getDurations(List<String> ids) throws IOException {
         LOG.info("Getting durations for {} videos", ids.size());
         if (ids.isEmpty()) {
             return Map.of();
-        } else if (ids.size() > 25) {
+        } else if (ids.size() > GET_LENGTH_TRESHOLD) {
             LOG.warn("Too many video ids to get durations. Getting first 25");
-            return getDurations(ids.stream().limit(25).collect(Collectors.toSet()));
+            return getDurations(ids.stream().limit(25).toList());
         }
 
         var request = service.videos()
-                .list("contentDetails")
-                .setId(String.join(",", ids));
+                .list(List.of(CONTENT_DETAILS))
+                .setId(ids);
 
         var response = request.execute();
         List<Video> result = response.getItems();
