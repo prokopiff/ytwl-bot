@@ -213,8 +213,12 @@ public class Main {
             while (true) {
                 try {
                     String id = addToWlQueue.take();
-                    LOG.debug("Got a message");
-                    yt.addToWL(id);
+                    LOG.debug("Got a message: {}", id);
+                    if (id.startsWith("WL")) {
+                        yt.addToWL(id.substring(2));
+                    } else {
+                        yt.addToLL(id.substring(2));
+                    }
                 } catch (InterruptedException | IOException e) {
                     LOG.error(e.getMessage(), e);
                 }

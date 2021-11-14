@@ -52,10 +52,12 @@ public class TG {
         LOG.info("Sending videos");
         vids.forEach(vid -> {
             var toWlButton = new InlineKeyboardButton("Add to WL")
-                    .callbackData(vid.id());
+                    .callbackData("WL" + vid.id());
+            var toLlButton = new InlineKeyboardButton("Add to LL")
+                    .callbackData("LL" + vid.id());
             var message = new SendMessage(CHAT_ID,
                     "%s\n%s\n\n%s".formatted(vid.channel(), vid.duration(), vid.getUrl()))
-                    .replyMarkup(new InlineKeyboardMarkup(toWlButton));
+                    .replyMarkup(new InlineKeyboardMarkup(toWlButton, toLlButton));
             bot.execute(message);
         });
     }

@@ -49,7 +49,8 @@ public class YT {
     private static final String APPLICATION_NAME = "Bot Client 1";
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
     private static final String CREDENTIALS_DIRECTORY = Config.getRequiredProperty("local-dir");
-    private static final String BOT_WL_PLAYLIST_ID = Config.getRequiredProperty("yt.playlist-id");
+    private static final String BOT_WL_PLAYLIST_ID = Config.getRequiredProperty("yt.wl-playlist-id");
+    private static final String BOT_LL_PLAYLIST_ID = Config.getRequiredProperty("yt.ll-playlist-id");
     private static final boolean CHECK_WL_DUPLICATES = Config.getProperty("yt.check-wl-duplicates")
             .map(v -> Set.of("true", "1", "yes").contains(v.toLowerCase()))
             .orElse(true);
@@ -88,7 +89,7 @@ public class YT {
         GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
         // Build flow and trigger user authorization request.
-        FileDataStoreFactory fileDataStoreFactory = new FileDataStoreFactory(
+        var fileDataStoreFactory = new FileDataStoreFactory(
                 new File(System.getProperty("user.home"), CREDENTIALS_DIRECTORY));
         var oauth = new OAuthForDevice(
                 clientSecrets.getDetails().getClientId(),
@@ -103,16 +104,16 @@ public class YT {
     private static YouTube getService(Consumer<String> sendMessageHandler)
             throws GeneralSecurityException, IOException {
         LOG.debug("Initializing API");
-        final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-        Credential credential = authorize(sendMessageHandler);
+        final var httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+        var credential = authorize(sendMessageHandler);
 
         return new YouTube.Builder(httpTransport, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
                 .build();
     }
 
-    public List<com.vprokopiv.ytbot.yt.model.Channel> getSubscriptions() throws IOException {
-        YouTube.Subscriptions.List subsRequest = service.subscriptions()
+    public List<Channel> getSubscriptions() throws IOException {
+        var subsRequest = service.subscriptions()
                 .list(List.of(SNIPPET));
 
         SubscriptionListResponse response = subsRequest.setMaxResults(500L)
@@ -164,35 +165,44 @@ public class YT {
     }
 
     public void addToWL(String videoId) throws IOException {
-        Set<String> wl = getWl();
+        LOG.debug("Adding {} to WL", videoId);
+        addToList(videoId, BOT_WL_PLAYLIST_ID);
+    }
+
+    public void addToLL(String videoId) throws IOException {
+        LOG.debug("Adding {} to LL", videoId);
+        addToList(videoId, BOT_LL_PLAYLIST_ID);
+    }
+
+    private void addToList(String videoId, String playlistId) throws IOException {
+        Set<String> wl = getCurrentList(playlistId);
         if (wl.contains(videoId)) {
-            LOG.debug("Already in WL");
+            LOG.debug("Already in list");
         } else {
-            LOG.debug("Adding {} to WL", videoId);
             var snippet = new PlaylistItemSnippet()
-                    .setPlaylistId(BOT_WL_PLAYLIST_ID)
+                    .setPlaylistId(playlistId)
                     .setResourceId(new ResourceId()
                             .setKind("youtube#video")
                             .setVideoId(videoId)
                     );
 
             service.playlistItems()
-                    .insert(List.of("snippet"), new PlaylistItem().setSnippet(snippet))
+                    .insert(List.of(SNIPPET), new PlaylistItem().setSnippet(snippet))
                     .execute();
-            LOG.info("WL entry added");
+            LOG.info("List entry added");
         }
     }
 
-    private Set<String> getWl() throws IOException {
+    private Set<String> getCurrentList(String playlistId) throws IOException {
         if (!CHECK_WL_DUPLICATES) {
-            LOG.debug("Not getting current WL");
+            LOG.debug("Not getting current list");
             return Set.of();
         }
 
-        LOG.debug("Getting current WL");
+        LOG.debug("Getting current list");
         var requqest = service.playlistItems()
                 .list(List.of(SNIPPET, CONTENT_DETAILS))
-                .setPlaylistId(BOT_WL_PLAYLIST_ID);
+                .setPlaylistId(playlistId);
         var response = requqest.execute();
         List<PlaylistItem> result = new ArrayList<>(response.getItems());
         while (response.getNextPageToken() != null) {
