@@ -15,7 +15,7 @@ public class Config {
 
     static {
         PROPS = new Properties();
-        var propsPath = Optional.ofNullable(System.getProperty("app.properties"));
+        var propsPath = Optional.ofNullable(System.getProperty("application.properties"));
         propsPath.ifPresentOrElse(
                 path -> {
                     try (FileReader fr = new FileReader(path)) {
@@ -26,7 +26,7 @@ public class Config {
                 },
                 () -> {
                     try {
-                        PROPS.load(ClassLoader.getSystemResourceAsStream("app.properties"));
+                        PROPS.load(ClassLoader.getSystemResourceAsStream("application.properties"));
                     } catch (IOException e) {
                         e.printStackTrace();
                     }

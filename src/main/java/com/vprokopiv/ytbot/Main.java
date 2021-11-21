@@ -9,7 +9,6 @@ import com.vprokopiv.ytbot.yt.model.Vid;
 import com.vprokopiv.ytbot.yt.YT;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -140,7 +139,6 @@ public class Main {
                 + "%02d:%02d".formatted(duration.toMinutesPart(), duration.toSecondsPart());
     }
 
-    @NotNull
     private static String getFixedSizeTitle(Channel channel) {
         if (channel.title() == null) {
             return "NULL";
@@ -158,7 +156,6 @@ public class Main {
         return valBuilder.toString();
     }
 
-    @NotNull
     private static String stringStackTrace(Exception e) {
         var sw = new StringWriter();
         var pw = new PrintWriter(sw);
@@ -198,7 +195,6 @@ public class Main {
         }
     }
 
-    @NotNull
     static DateTime getCheckTime(long lastRunTs) {
         return DateTime.parseRfc3339(
                 ZonedDateTime.of(LocalDateTime.ofEpochSecond(lastRunTs / 1000, 0, ZONE_OFFSET), ZONE_OFFSET)
@@ -206,7 +202,6 @@ public class Main {
         );
     }
 
-    @NotNull
     private static Runnable addToWlQueueWatcher(YT yt) {
         return () -> {
             LOG.info("Starting add to WL queue checker");
@@ -226,7 +221,6 @@ public class Main {
         };
     }
 
-    @NotNull
     private static Runnable tgMessageQueueWatcher(TG tg) {
         return () -> {
             LOG.info("Starting TG message queue checker");
