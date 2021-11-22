@@ -3,12 +3,14 @@ package com.vprokopiv.ytbot;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.youtube.model.Activity;
 import com.vprokopiv.ytbot.config.Config;
+import com.vprokopiv.ytbot.stats.HistoryRepository;
 import com.vprokopiv.ytbot.tg.Telegram;
 import com.vprokopiv.ytbot.yt.YouTubeService;
 import com.vprokopiv.ytbot.yt.model.Channel;
 import com.vprokopiv.ytbot.yt.model.Vid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +36,7 @@ import static com.vprokopiv.ytbot.util.Util.getFixedSizeTitle;
 import static com.vprokopiv.ytbot.util.Util.stringStackTrace;
 
 @Component
+@Lazy
 public class PeriodicJob  {
     private static final Logger LOG = LoggerFactory.getLogger(PeriodicJob.class);
 
@@ -52,7 +55,8 @@ public class PeriodicJob  {
     public PeriodicJob(Config config,
                        Telegram telegram,
                        YouTubeService youTubeService,
-                       QueuesManager queuesManager) {
+                       QueuesManager queuesManager,
+                       HistoryRepository historyRepository) {
         this.localDir = config.getLocalDir();
         this.telegram = telegram;
         this.youTubeService = youTubeService;

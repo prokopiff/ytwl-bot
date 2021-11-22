@@ -25,6 +25,7 @@ import com.vprokopiv.ytbot.yt.model.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +46,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Component
+@Lazy
 public class YouTubeService {
     private static final Logger LOG = LoggerFactory.getLogger(YouTubeService.class);
 
