@@ -4,6 +4,7 @@ import com.vprokopiv.ytbot.yt.model.Channel;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.Duration;
 
 public class Util {
     private Util() {}
@@ -30,5 +31,13 @@ public class Util {
         var pw = new PrintWriter(sw);
         e.printStackTrace(pw);
         return sw.toString();
+    }
+
+    public static String formatDuration(Duration duration) {
+        if (duration == null) {
+            return "";
+        }
+        return (duration.toHoursPart() > 0 ? (duration.toHoursPart() + ":") : "")
+                + "%02d:%02d".formatted(duration.toMinutesPart(), duration.toSecondsPart());
     }
 }

@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.vprokopiv.ytbot.util.Util.formatDuration;
 import static com.vprokopiv.ytbot.util.Util.getFixedSizeTitle;
 import static com.vprokopiv.ytbot.util.Util.stringStackTrace;
 
@@ -128,16 +129,6 @@ public class PeriodicJob  {
             queuesManager.putTgMessage(telegram.sendMessageOf(stringStackTrace(e)));
         }
     }
-
-    static String formatDuration(Duration duration) {
-        if (duration == null) {
-            return "";
-        }
-        return (duration.toHoursPart() > 0 ? (duration.toHoursPart() + ":") : "")
-                + "%02d:%02d".formatted(duration.toMinutesPart(), duration.toSecondsPart());
-    }
-
-
 
     private void saveLastRunTime(long runTs) throws IOException {
         String localDir = System.getProperty("user.home") + "/" + this.localDir;

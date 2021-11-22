@@ -25,6 +25,7 @@ import com.vprokopiv.ytbot.yt.model.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -47,7 +48,8 @@ import java.util.stream.Collectors;
 public class YouTubeService {
     private static final Logger LOG = LoggerFactory.getLogger(YouTubeService.class);
 
-    private static final String CLIENT_SECRETS = "client_secrets.json";
+    private final Resource clientSecrets;
+
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
     private static final String APPLICATION_NAME = "Bot Client 1";
@@ -60,8 +62,12 @@ public class YouTubeService {
     private final YouTube service;
     private final Config config;
 
-    private YouTubeService(Consumer<String> sendMessageHandler, Config config) throws GeneralSecurityException, IOException {
+    private YouTubeService(Consumer<String> sendMessageHandler,
+                           Config config,
+                           @Value("classpath:client_secrets.json") Resource clientSecrets)
+            throws GeneralSecurityException, IOException {
         this.config = config;
+        this.clientSecrets = clientSecrets;
         this.service = getService(sendMessageHandler);
     }
 
@@ -75,7 +81,14 @@ public class YouTubeService {
                     } catch (FileNotFoundException e) {
                         throw new RuntimeException(e);
                     }
-                }).orElseGet(() -> ClassLoader.getSystemResourceAsStream(CLIENT_SECRETS));
+                }).orElseGet(() -> {
+                    try {
+                        return clientSecrets.getInputStream();
+                    } catch (IOException e) {
+                        LOG.error(e.getMessage(), e);
+                        throw new RuntimeException(e);
+                    }
+                });
         GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
         // Build flow and trigger user authorization request.
