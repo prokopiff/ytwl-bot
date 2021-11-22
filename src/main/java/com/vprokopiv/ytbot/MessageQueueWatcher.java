@@ -6,8 +6,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -19,7 +17,7 @@ public class MessageQueueWatcher {
     private final Telegram telegram;
     private final ExecutorService executorService;
 
-    public MessageQueueWatcher(QueuesManager queuesManager, Telegram telegram) throws ExecutionException, InterruptedException, IOException {
+    public MessageQueueWatcher(QueuesManager queuesManager, Telegram telegram) {
         this.queuesManager = queuesManager;
         this.telegram = telegram;
         this.executorService = Executors.newSingleThreadExecutor();

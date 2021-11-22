@@ -1,14 +1,11 @@
 package com.vprokopiv.ytbot;
 
-import com.vprokopiv.ytbot.tg.Telegram;
 import com.vprokopiv.ytbot.yt.YouTubeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,7 +17,7 @@ public class AddToWlQueueWatcher {
     private final YouTubeService youTubeService;
     private final ExecutorService executorService;
 
-    public AddToWlQueueWatcher(QueuesManager queuesManager, YouTubeService youTubeService) throws ExecutionException, InterruptedException, IOException {
+    public AddToWlQueueWatcher(QueuesManager queuesManager, YouTubeService youTubeService) {
         this.queuesManager = queuesManager;
         this.youTubeService = youTubeService;
         this.executorService = Executors.newSingleThreadExecutor();

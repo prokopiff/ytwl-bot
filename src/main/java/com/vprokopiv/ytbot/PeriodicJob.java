@@ -9,8 +9,6 @@ import com.vprokopiv.ytbot.yt.model.Channel;
 import com.vprokopiv.ytbot.yt.model.Vid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -18,10 +16,7 @@ import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.file.Files;
-import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -146,8 +141,8 @@ public class PeriodicJob  {
 
     private void saveLastRunTime(long runTs) throws IOException {
         String localDir = System.getProperty("user.home") + "/" + this.localDir;
-        File lastCheck = new File(localDir, LAST_RUN_FILE);
-        try (FileWriter fw = new FileWriter(lastCheck)) {
+        var lastCheck = new File(localDir, LAST_RUN_FILE);
+        try (var fw = new FileWriter(lastCheck)) {
             fw.write(String.valueOf(runTs));
         } catch (IOException e) {
             LOG.warn(e.getMessage(), e);
