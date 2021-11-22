@@ -20,10 +20,12 @@ import com.google.api.services.youtube.model.ResourceId;
 import com.google.api.services.youtube.model.Subscription;
 import com.google.api.services.youtube.model.SubscriptionListResponse;
 import com.google.api.services.youtube.model.Video;
-import com.vprokopiv.ytbot.Config;
+import com.vprokopiv.ytbot.config.Config;
 import com.vprokopiv.ytbot.yt.model.Channel;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,49 +38,37 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class YT {
-    private static final Logger LOG = LogManager.getLogger(YT.class);
+@Component
+public class YouTubeService {
+    private static final Logger LOG = LoggerFactory.getLogger(YouTubeService.class);
 
     private static final String CLIENT_SECRETS = "client_secrets.json";
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
     private static final String APPLICATION_NAME = "Bot Client 1";
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-    private static final String CREDENTIALS_DIRECTORY = Config.getRequiredProperty("local-dir");
-    private static final String BOT_WL_PLAYLIST_ID = Config.getRequiredProperty("yt.wl-playlist-id");
-    private static final String BOT_LL_PLAYLIST_ID = Config.getRequiredProperty("yt.ll-playlist-id");
-    private static final boolean CHECK_WL_DUPLICATES = Config.getProperty("yt.check-wl-duplicates")
-            .map(v -> Set.of("true", "1", "yes").contains(v.toLowerCase()))
-            .orElse(true);
     public static final int GET_LENGTH_TRESHOLD = 25;
     public static final long PAGE_SIZE = 25L;
     public static final String CONTENT_DETAILS = "contentDetails";
     public static final String SNIPPET = "snippet";
 
-    private static YT instance;
     private final YouTube service;
+    private final Config config;
 
-    private YT(Consumer<String> sendMessageHandler) throws GeneralSecurityException, IOException {
+    private YouTubeService(Consumer<String> sendMessageHandler, Config config) throws GeneralSecurityException, IOException {
+        this.config = config;
         this.service = getService(sendMessageHandler);
     }
 
-    public static synchronized YT getInstance(Consumer<String> sendMessageHandler)
-            throws GeneralSecurityException, IOException {
-        if (instance == null) {
-            instance = new YT(sendMessageHandler);
-        }
-        return instance;
-    }
-
-    private static Credential authorize(Consumer<String> sendMessageHandler) throws IOException {
+    private Credential authorize(Consumer<String> sendMessageHandler) throws IOException {
         LOG.debug("Authorising");
         // Load client secrets.
-        var secrets = Config.getProperty("secrets");
-        InputStream in = secrets.map(
+        InputStream in = config.getSecretsLocation().map(
                 file -> {
                     try {
                         return (InputStream) new FileInputStream(file);
@@ -90,7 +80,7 @@ public class YT {
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
         // Build flow and trigger user authorization request.
         var fileDataStoreFactory = new FileDataStoreFactory(
-                new File(System.getProperty("user.home"), CREDENTIALS_DIRECTORY));
+                new File(System.getProperty("user.home"), config.getLocalDir()));
         var oauth = new OAuthForDevice(
                 clientSecrets.getDetails().getClientId(),
                 clientSecrets.getDetails().getClientSecret(),
@@ -101,7 +91,7 @@ public class YT {
         return oauth.getCredential();
     }
 
-    private static YouTube getService(Consumer<String> sendMessageHandler)
+    private YouTube getService(Consumer<String> sendMessageHandler)
             throws GeneralSecurityException, IOException {
         LOG.debug("Initializing API");
         final var httpTransport = GoogleNetHttpTransport.newTrustedTransport();
@@ -166,12 +156,12 @@ public class YT {
 
     public void addToWL(String videoId) throws IOException {
         LOG.debug("Adding {} to WL", videoId);
-        addToList(videoId, BOT_WL_PLAYLIST_ID);
+        addToList(videoId, config.getWlPlaylistId());
     }
 
     public void addToLL(String videoId) throws IOException {
         LOG.debug("Adding {} to LL", videoId);
-        addToList(videoId, BOT_LL_PLAYLIST_ID);
+        addToList(videoId, config.getLlPlaylistId());
     }
 
     private void addToList(String videoId, String playlistId) throws IOException {
@@ -194,7 +184,7 @@ public class YT {
     }
 
     private Set<String> getCurrentList(String playlistId) throws IOException {
-        if (!CHECK_WL_DUPLICATES) {
+        if (!config.isCheckWlDuplicates()) {
             LOG.debug("Not getting current list");
             return Set.of();
         }

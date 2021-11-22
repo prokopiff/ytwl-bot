@@ -7,26 +7,26 @@ import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.SendMessage;
-import com.vprokopiv.ytbot.Config;
+import com.vprokopiv.ytbot.config.Config;
 import com.vprokopiv.ytbot.yt.model.Vid;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.function.Consumer;
 
-public class TG {
-    private static final Logger LOG = LogManager.getLogger(TG.class);
-
-    private static final String TOKEN = Config.getRequiredProperty("bot.token");
-    private static final long CHAT_ID = Long.parseLong(Config.getRequiredProperty("bot.chat-id"));
-
-    private static TG instance;
+@Component
+public class Telegram {
+    private static final Logger LOG = LoggerFactory.getLogger(Telegram.class);
 
     private final TelegramBot bot;
+    private final Config config;
 
-    private TG(Consumer<String> addToWlHandler) {
-        this.bot = new TelegramBot(TOKEN);
+    public Telegram(Consumer<String> addToWlHandler, Config config) {
+        LOG.info("Initializing Telegram component");
+        this.config = config;
+        this.bot = new TelegramBot(config.getToken());
 
         bot.setUpdatesListener(updates -> {
             updates.forEach(update -> {
@@ -41,13 +41,6 @@ public class TG {
         });
     }
 
-    public static synchronized TG getInstance(Consumer<String> addToWlHandler) {
-        if (instance == null) {
-            instance = new TG(addToWlHandler);
-        }
-        return instance;
-    }
-
     public void sendVideos(List<Vid> vids) {
         LOG.info("Sending videos");
         vids.forEach(vid -> {
@@ -55,7 +48,7 @@ public class TG {
                     .callbackData("WL" + vid.id());
             var toLlButton = new InlineKeyboardButton("Add to LL")
                     .callbackData("LL" + vid.id());
-            var message = new SendMessage(CHAT_ID,
+            var message = new SendMessage(config.getChatId(),
                     "%s\n%s\n\n%s".formatted(vid.channel(), vid.duration(), vid.getUrl()))
                     .replyMarkup(new InlineKeyboardMarkup(toWlButton, toLlButton));
             bot.execute(message);
@@ -71,7 +64,7 @@ public class TG {
         sendMessage(msg);
     }
 
-    public static SendMessage sendMessageOf(String msg) {
-        return new SendMessage(TG.CHAT_ID, msg);
+    public SendMessage sendMessageOf(String msg) {
+        return new SendMessage(config.getChatId(), msg);
     }
 }

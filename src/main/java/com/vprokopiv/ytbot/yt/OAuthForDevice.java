@@ -15,8 +15,8 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.Clock;
 import com.google.api.client.util.store.DataStore;
 import com.google.api.client.util.store.FileDataStoreFactory;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -26,7 +26,7 @@ import java.util.Properties;
 import java.util.function.Consumer;
 
 public class OAuthForDevice {
-    private static final Logger LOG = LogManager.getLogger(OAuthForDevice.class);
+    private static final Logger LOG = LoggerFactory.getLogger(OAuthForDevice.class);
 
     private static final String TOKEN_STORE_USER_ID = "user";
     private static final String SCOPE = "https://www.googleapis.com/auth/youtube";
@@ -53,7 +53,7 @@ public class OAuthForDevice {
 
     public Credential getCredential() {
         LOG.info("Getting credential");
-        Credential credential = null;
+        Credential credential;
         try {
             DataStore<StoredCredential> datastore = fileDataStoreFactory.getDataStore("youtube_token");
 
