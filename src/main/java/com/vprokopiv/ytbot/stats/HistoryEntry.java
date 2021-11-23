@@ -5,6 +5,7 @@ import com.vprokopiv.ytbot.yt.model.Video;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.Table;
 import java.util.Objects;
 
@@ -22,6 +23,7 @@ public class HistoryEntry {
     private Long durationSeconds;
 
     @Column(nullable = false)
+    @Lob
     private String description;
 
     @Column(nullable = false)
