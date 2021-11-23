@@ -4,6 +4,7 @@ import com.vprokopiv.ytbot.tg.Telegram;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -11,7 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component
-@Lazy
+@Profile("!test")
 public class MessageQueueWatcher {
     private static final Logger LOG = LoggerFactory.getLogger(MessageQueueWatcher.class);
 

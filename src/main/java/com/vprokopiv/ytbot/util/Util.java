@@ -33,6 +33,13 @@ public class Util {
         return sw.toString();
     }
 
+    public static String formatDuration(Long duration) {
+        if (duration == null) {
+            return "";
+        }
+        return formatDuration(Duration.ofSeconds(duration));
+    }
+
     public static String formatDuration(Duration duration) {
         if (duration == null) {
             return "";

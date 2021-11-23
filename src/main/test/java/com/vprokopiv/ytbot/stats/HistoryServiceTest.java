@@ -44,9 +44,9 @@ class HistoryServiceTest {
         return new HistoryEntry(
                 "id1",
                 "title",
-                60,
+                60L,
                 "Description",
-                "channel-id",
+                "channelName-id",
                 "Channel Name",
                 null,
                 null

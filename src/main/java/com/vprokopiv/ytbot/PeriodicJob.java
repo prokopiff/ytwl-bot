@@ -3,14 +3,16 @@ package com.vprokopiv.ytbot;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.youtube.model.Activity;
 import com.vprokopiv.ytbot.config.Config;
-import com.vprokopiv.ytbot.stats.HistoryRepository;
+import com.vprokopiv.ytbot.stats.HistoryEntry;
+import com.vprokopiv.ytbot.stats.HistoryService;
 import com.vprokopiv.ytbot.tg.Telegram;
 import com.vprokopiv.ytbot.yt.YouTubeService;
 import com.vprokopiv.ytbot.yt.model.Channel;
-import com.vprokopiv.ytbot.yt.model.Vid;
+import com.vprokopiv.ytbot.yt.model.Video;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -26,17 +28,18 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.vprokopiv.ytbot.util.Util.formatDuration;
 import static com.vprokopiv.ytbot.util.Util.getFixedSizeTitle;
 import static com.vprokopiv.ytbot.util.Util.stringStackTrace;
 
+@Profile("!test")
 @Component
-@Lazy
 public class PeriodicJob  {
     private static final Logger LOG = LoggerFactory.getLogger(PeriodicJob.class);
 
@@ -49,6 +52,7 @@ public class PeriodicJob  {
     private final Telegram telegram;
     private final YouTubeService youTubeService;
     private final QueuesManager queuesManager;
+    private final HistoryService historyService;
 
     private final String localDir;
 
@@ -56,11 +60,12 @@ public class PeriodicJob  {
                        Telegram telegram,
                        YouTubeService youTubeService,
                        QueuesManager queuesManager,
-                       HistoryRepository historyRepository) {
+                       HistoryService historyService) {
         this.localDir = config.getLocalDir();
         this.telegram = telegram;
         this.youTubeService = youTubeService;
         this.queuesManager = queuesManager;
+        this.historyService = historyService;
     }
 
     @PostConstruct
@@ -72,6 +77,7 @@ public class PeriodicJob  {
     public void scheduled() {
         try {
             LOG.info("Updating...");
+            Map<String, HistoryEntry> history = new HashMap<>();
             long lastRunTs = lastRun();
 
             if (lastRunTs > System.currentTimeMillis() - Duration.ofHours(2).toMillis()) {
@@ -94,30 +100,33 @@ public class PeriodicJob  {
 
             var runTs = System.currentTimeMillis();
 
-            List<Vid> vids = activities
+            List<Video> videos = activities
                     .sorted(ACTIVITY_COMPARATOR)
                     .filter(a -> "upload".equals(a.getSnippet().getType()))
-                    .map(activity -> new Vid(
+                    .map(activity -> new Video(
                             activity.getContentDetails().getUpload().getVideoId(),
                             activity.getSnippet().getTitle(),
-                            activity.getSnippet().getChannelTitle(),
-                            ""))
+                            activity.getSnippet().getDescription(),
+                            new Channel(
+                                    activity.getSnippet().getChannelId(),
+                                    activity.getSnippet().getChannelTitle()),
+                            null))
                     .toList();
 
-            LOG.info("Got {} videos", vids.size());
-            try {
-                var ids = vids.stream().map(Vid::id).toList();
-                Map<String, Duration> durations = youTubeService.getDurations(ids);
-                vids = vids.stream()
-                        .map(vid -> {
-                            var duration = durations.get(vid.id());
-                            var durationStr = formatDuration(duration);
+            LOG.info("Got {} videos", videos.size());
 
-                            return new Vid(vid, durationStr);
+            try {
+                var ids = videos.stream().map(Video::id).toList();
+                Map<String, Duration> durations = youTubeService.getDurations(ids);
+                videos = videos.stream()
+                        .map(vid -> {
+                            var duration = Optional.ofNullable(durations.get(vid.id()));
+                            return new Video(vid, duration.map(Duration::toSeconds).orElse(null));
                         })
                         .toList();
+                videos.forEach(video -> history.put(video.id(), new HistoryEntry(video)));
             } finally {
-                telegram.sendVideos(vids);
+                telegram.sendVideos(videos);
             }
 
             String doneMsg = "Done. Run was from %s to %s".formatted(
@@ -127,6 +136,7 @@ public class PeriodicJob  {
             LOG.info(doneMsg);
 
             saveLastRunTime(runTs);
+            historyService.saveAll(history.values());
 
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);

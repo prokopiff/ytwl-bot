@@ -28,6 +28,16 @@ public class HistoryService {
         return historyRepository.save(entry);
     }
 
+    public void saveAll(Iterable<HistoryEntry> entries) {
+        for (var entry : entries) {
+            try {
+                save(entry);
+            } catch (IllegalStateException e) {
+                LOG.info("Not adding {}, already exists", entry.getId());
+            }
+        }
+    }
+
     public boolean exists(String id) {
         return historyRepository.existsById(id);
     }

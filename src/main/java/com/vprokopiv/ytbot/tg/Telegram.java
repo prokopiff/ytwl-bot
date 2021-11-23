@@ -8,15 +8,19 @@ import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.config.Config;
-import com.vprokopiv.ytbot.yt.model.Vid;
+import com.vprokopiv.ytbot.yt.model.Video;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.function.Consumer;
 
+import static com.vprokopiv.ytbot.util.Util.formatDuration;
+
 @Component
+@Profile("!test")
 public class Telegram {
     private static final Logger LOG = LoggerFactory.getLogger(Telegram.class);
 
@@ -41,15 +45,15 @@ public class Telegram {
         });
     }
 
-    public void sendVideos(List<Vid> vids) {
+    public void sendVideos(List<Video> videos) {
         LOG.info("Sending videos");
-        vids.forEach(vid -> {
+        videos.forEach(video -> {
             var toWlButton = new InlineKeyboardButton("Add to WL")
-                    .callbackData("WL" + vid.id());
+                    .callbackData("WL" + video.id());
             var toLlButton = new InlineKeyboardButton("Add to LL")
-                    .callbackData("LL" + vid.id());
+                    .callbackData("LL" + video.id());
             var message = new SendMessage(config.getChatId(),
-                    "%s\n%s\n\n%s".formatted(vid.channel(), vid.duration(), vid.getUrl()))
+                    "%s\n%s\n\n%s".formatted(video.channel().title(), formatDuration(video.duration()), video.getUrl()))
                     .replyMarkup(new InlineKeyboardMarkup(toWlButton, toLlButton));
             bot.execute(message);
         });

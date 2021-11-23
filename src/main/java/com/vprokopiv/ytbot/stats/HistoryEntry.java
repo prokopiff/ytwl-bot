@@ -1,5 +1,7 @@
 package com.vprokopiv.ytbot.stats;
 
+import com.vprokopiv.ytbot.yt.model.Video;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -17,7 +19,7 @@ public class HistoryEntry {
     @Column(nullable = false)
     private String title;
 
-    private Integer durationSeconds;
+    private Long durationSeconds;
 
     @Column(nullable = false)
     private String description;
@@ -37,7 +39,7 @@ public class HistoryEntry {
 
     public HistoryEntry(String id,
                         String title,
-                        int durationSeconds,
+                        Long durationSeconds,
                         String description,
                         String channelId,
                         String channelName,
@@ -51,6 +53,27 @@ public class HistoryEntry {
         this.channelName = channelName;
         this.addedToWl = addedToWl;
         this.addedToLl = addedToLl;
+    }
+
+    public HistoryEntry(Video video) {
+        this(
+                video.id(),
+                video.title(),
+                video.description(),
+                video.channel().id(),
+                video.channel().title(),
+                video.duration()
+        );
+    }
+
+    private HistoryEntry(
+            String id, String title, String description, String channelId, String channelName, Long duration) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.channelId = channelId;
+        this.channelName = channelName;
+        this.durationSeconds = duration;
     }
 
     public String getId() {
@@ -69,11 +92,11 @@ public class HistoryEntry {
         this.title = title;
     }
 
-    public int getDurationSeconds() {
+    public Long getDurationSeconds() {
         return durationSeconds;
     }
 
-    public void setDurationSeconds(int durationSeconds) {
+    public void setDurationSeconds(Long durationSeconds) {
         this.durationSeconds = durationSeconds;
     }
 

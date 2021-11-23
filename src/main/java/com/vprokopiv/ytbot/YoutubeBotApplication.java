@@ -4,9 +4,9 @@ import com.vprokopiv.ytbot.tg.Telegram;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import javax.sql.DataSource;
 import java.util.function.Consumer;
 
 @SpringBootApplication
@@ -18,11 +18,13 @@ public class YoutubeBotApplication {
     }
 
     @Bean
+    @Profile("!test")
     public Consumer<String> addToWlHandler(QueuesManager queuesManager) {
         return queuesManager::putAddToWlMessage;
     }
 
     @Bean
+    @Profile("!test")
     public Consumer<String> sendMessageHandler(QueuesManager queuesManager, Telegram telegram) {
         return s -> queuesManager.putTgMessage(telegram.sendMessageOf(s));
     }
