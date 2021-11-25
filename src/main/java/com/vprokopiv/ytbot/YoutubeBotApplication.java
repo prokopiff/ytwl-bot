@@ -1,5 +1,6 @@
 package com.vprokopiv.ytbot;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vprokopiv.ytbot.tg.Telegram;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -27,5 +28,10 @@ public class YoutubeBotApplication {
     @Profile("!test")
     public Consumer<String> sendMessageHandler(QueuesManager queuesManager, Telegram telegram) {
         return s -> queuesManager.putTgMessage(telegram.sendMessageOf(s));
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 }
