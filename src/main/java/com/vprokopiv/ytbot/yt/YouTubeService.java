@@ -21,27 +21,20 @@ import com.google.api.services.youtube.model.Subscription;
 import com.google.api.services.youtube.model.SubscriptionListResponse;
 import com.google.api.services.youtube.model.Video;
 import com.vprokopiv.ytbot.config.Config;
+import com.vprokopiv.ytbot.config.GoogleSecretsConfig;
 import com.vprokopiv.ytbot.yt.model.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -50,8 +43,6 @@ import java.util.stream.Collectors;
 @Profile("!test")
 public class YouTubeService {
     private static final Logger LOG = LoggerFactory.getLogger(YouTubeService.class);
-
-    private final Resource clientSecrets;
 
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
@@ -63,37 +54,22 @@ public class YouTubeService {
     public static final String SNIPPET = "snippet";
 
     private final YouTube service;
+    private final GoogleSecretsConfig secretsConfig;
     private final Config config;
 
     private YouTubeService(Consumer<String> sendMessageHandler,
                            Config config,
-                           @Value("classpath:client_secrets.json") Resource clientSecrets)
+                           GoogleSecretsConfig secretsConfig)
             throws GeneralSecurityException, IOException {
         this.config = config;
-        this.clientSecrets = clientSecrets;
+        this.secretsConfig = secretsConfig;
         this.service = getService(sendMessageHandler);
     }
 
     private Credential authorize(Consumer<String> sendMessageHandler) throws IOException {
         LOG.debug("Authorising");
         // Load client secrets.
-        InputStream in = config.getSecretsLocation().map(
-                file -> {
-                    try {
-                        return (InputStream) new FileInputStream(file);
-                    } catch (FileNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
-                }).orElseGet(() -> {
-                    try {
-                        return clientSecrets.getInputStream();
-                    } catch (IOException e) {
-                        LOG.error(e.getMessage(), e);
-                        throw new RuntimeException(e);
-                    }
-                });
-        GoogleClientSecrets clientSecrets =
-                GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+        GoogleClientSecrets clientSecrets = secretsConfig.getSecrets();
         // Build flow and trigger user authorization request.
         var fileDataStoreFactory = new FileDataStoreFactory(
                 new File(System.getProperty("user.home"), config.getLocalDir()));
