@@ -2,7 +2,7 @@ package com.vprokopiv.ytbot;
 
 import com.google.api.client.util.DateTime;
 import com.google.api.services.youtube.model.Activity;
-import com.vprokopiv.ytbot.config.Config;
+import com.vprokopiv.ytbot.state.StateManager;
 import com.vprokopiv.ytbot.stats.HistoryEntry;
 import com.vprokopiv.ytbot.stats.HistoryService;
 import com.vprokopiv.ytbot.tg.Telegram;
@@ -11,16 +11,11 @@ import com.vprokopiv.ytbot.yt.model.Channel;
 import com.vprokopiv.ytbot.yt.model.Video;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -32,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.vprokopiv.ytbot.util.Util.getFixedSizeTitle;
@@ -48,24 +42,24 @@ public class PeriodicJob  {
     public static final Comparator<Activity> ACTIVITY_COMPARATOR = Comparator.comparing(a -> a.getSnippet()
             .getPublishedAt().getValue());
     public static final long TWENTY_FOUR_HRS = Duration.ofHours(24L).toMillis();
+    static final String LAST_RUN_TS = "last_run_ts";
 
     private final Telegram telegram;
     private final YouTubeService youTubeService;
     private final QueuesManager queuesManager;
     private final HistoryService historyService;
+    private final StateManager stateManager;
 
-    private final String localDir;
-
-    public PeriodicJob(Config config,
-                       Telegram telegram,
+    public PeriodicJob(Telegram telegram,
                        YouTubeService youTubeService,
                        QueuesManager queuesManager,
-                       HistoryService historyService) {
-        this.localDir = config.getLocalDir();
+                       HistoryService historyService,
+                       StateManager stateManager) {
         this.telegram = telegram;
         this.youTubeService = youTubeService;
         this.queuesManager = queuesManager;
         this.historyService = historyService;
+        this.stateManager = stateManager;
     }
 
     @PostConstruct
@@ -144,36 +138,17 @@ public class PeriodicJob  {
         }
     }
 
-    private void saveLastRunTime(long runTs) throws IOException {
-        String localDir = System.getProperty("user.home") + "/" + this.localDir;
-        var lastCheck = new File(localDir, LAST_RUN_FILE);
-        try (var fw = new FileWriter(lastCheck)) {
-            fw.write(String.valueOf(runTs));
-        } catch (IOException e) {
-            LOG.warn(e.getMessage(), e);
-            throw e;
-        }
+    private void saveLastRunTime(long runTs) {
+        stateManager.setState(LAST_RUN_TS, String.valueOf(runTs));
     }
 
     private long lastRun() {
-        LOG.info("Getting last run time");
-        String localDir = System.getProperty("user.home") + "/" + this.localDir;
-        var lastCheck = new File(localDir, LAST_RUN_FILE);
-        if (!lastCheck.exists()) {
-            LOG.info("No last check file. Returning 24hrs ago");
+        var lastCheck = stateManager.getState(LAST_RUN_TS);
+        if (lastCheck.isEmpty()) {
+            LOG.info("No last check timestamp. Returning 24hrs ago");
             return System.currentTimeMillis() - TWENTY_FOUR_HRS;
         }
-
-        try (Stream<String> lines = Files.lines(lastCheck.toPath())) {
-            var content = lines.collect(Collectors.joining());
-            var ts = Long.parseLong(content.trim());
-            LOG.info("Got last run time {}", ts);
-            return ts;
-        } catch (IOException e) {
-            LOG.warn(e.getMessage(), e);
-            LOG.info("Error reading last check file. Returning 24hrs ago");
-            return System.currentTimeMillis() - TWENTY_FOUR_HRS;
-        }
+        return Long.parseLong(lastCheck.get());
     }
 
     static DateTime getCheckTime(long lastRunTs) {

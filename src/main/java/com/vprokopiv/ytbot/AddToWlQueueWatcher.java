@@ -4,7 +4,6 @@ import com.vprokopiv.ytbot.stats.HistoryService;
 import com.vprokopiv.ytbot.yt.YouTubeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +15,7 @@ import java.util.concurrent.Executors;
 @Profile("!test")
 public class AddToWlQueueWatcher {
     private static final Logger LOG = LoggerFactory.getLogger(AddToWlQueueWatcher.class);
+    static final String WL = "WL";
 
     private final QueuesManager queuesManager;
     private final YouTubeService youTubeService;
@@ -38,8 +38,8 @@ public class AddToWlQueueWatcher {
             while (true) {
                 try {
                     var message = queuesManager.takeAddToWlMessage().get();
-                    var id = message.substring(2);
-                    if (message.startsWith("WL")) {
+                    var id = message.substring(WL.length());
+                    if (message.startsWith(WL)) {
                         youTubeService.addToWL(id);
                         historyService.setAddedToWl(id);
                     } else {

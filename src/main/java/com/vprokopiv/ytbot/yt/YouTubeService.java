@@ -9,7 +9,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 
 import com.google.api.client.util.DateTime;
-import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.Activity;
 import com.google.api.services.youtube.model.ActivityListResponse;
@@ -28,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
@@ -54,15 +52,18 @@ public class YouTubeService {
     public static final String SNIPPET = "snippet";
 
     private final YouTube service;
+    private final MapDataStoreFactory mapDataStoreFactory;
     private final GoogleSecretsConfig secretsConfig;
     private final Config config;
 
     private YouTubeService(Consumer<String> sendMessageHandler,
                            Config config,
-                           GoogleSecretsConfig secretsConfig)
+                           GoogleSecretsConfig secretsConfig,
+                           MapDataStoreFactory mapDataStoreFactory)
             throws GeneralSecurityException, IOException {
         this.config = config;
         this.secretsConfig = secretsConfig;
+        this.mapDataStoreFactory = mapDataStoreFactory;
         this.service = getService(sendMessageHandler);
     }
 
@@ -71,14 +72,13 @@ public class YouTubeService {
         // Load client secrets.
         GoogleClientSecrets clientSecrets = secretsConfig.getSecrets();
         // Build flow and trigger user authorization request.
-        var fileDataStoreFactory = new FileDataStoreFactory(
-                new File(System.getProperty("user.home"), config.getLocalDir()));
+
         var oauth = new OAuthForDevice(
                 clientSecrets.getDetails().getClientId(),
                 clientSecrets.getDetails().getClientSecret(),
                 HTTP_TRANSPORT,
                 sendMessageHandler,
-                fileDataStoreFactory);
+                mapDataStoreFactory);
 
         return oauth.getCredential();
     }

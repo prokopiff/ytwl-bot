@@ -14,7 +14,7 @@ import com.google.api.client.json.JsonObjectParser;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.Clock;
 import com.google.api.client.util.store.DataStore;
-import com.google.api.client.util.store.FileDataStoreFactory;
+import com.google.api.client.util.store.DataStoreFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ public class OAuthForDevice {
     private final String clientId;
     private final String clientSecret;
     private final Consumer<String> messageHandler;
-    private final FileDataStoreFactory fileDataStoreFactory;
+    private final DataStoreFactory dataStoreFactory;
 
     private final HttpTransport httpTransport;
 
@@ -43,19 +43,20 @@ public class OAuthForDevice {
     public OAuthForDevice(String clientId,
                           String clientSecret,
                           HttpTransport httpTransport,
-                          Consumer<String> messageHandler, FileDataStoreFactory fileDataStoreFactory) {
+                          Consumer<String> messageHandler,
+                          DataStoreFactory dataStoreFactory) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.httpTransport = httpTransport;
         this.messageHandler = messageHandler;
-        this.fileDataStoreFactory = fileDataStoreFactory;
+        this.dataStoreFactory = dataStoreFactory;
     }
 
     public Credential getCredential() {
         LOG.info("Getting credential");
         Credential credential;
         try {
-            DataStore<StoredCredential> datastore = fileDataStoreFactory.getDataStore("youtube_token");
+            DataStore<StoredCredential> datastore = dataStoreFactory.getDataStore("youtube_token");
 
             credential = loadCredential(TOKEN_STORE_USER_ID, datastore);
             if (credential == null) {

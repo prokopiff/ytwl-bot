@@ -12,7 +12,6 @@ public class Config {
     private String chatId;
     private String wlPlaylistId;
     private String llPlaylistId;
-    private String localDir;
     private boolean checkWlDuplicates = true;
 
     private String secretsLocation;
@@ -47,14 +46,6 @@ public class Config {
 
     public void setLlPlaylistId(String llPlaylistId) {
         this.llPlaylistId = llPlaylistId;
-    }
-
-    public String getLocalDir() {
-        return localDir;
-    }
-
-    public void setLocalDir(String localDir) {
-        this.localDir = localDir;
     }
 
     public boolean isCheckWlDuplicates() {

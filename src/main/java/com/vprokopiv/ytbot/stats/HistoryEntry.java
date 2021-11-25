@@ -158,10 +158,17 @@ public class HistoryEntry {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         HistoryEntry that = (HistoryEntry) o;
-        return id.equals(that.id) && title.equals(that.title) && Objects.equals(durationSeconds, that.durationSeconds) && description.equals(that.description) && channelId.equals(that.channelId) && channelName.equals(that.channelName) && Objects.equals(addedToWl, that.addedToWl) && Objects.equals(addedToLl, that.addedToLl);
+        return id.equals(that.id) && title.equals(that.title) && Objects.equals(durationSeconds, that.durationSeconds)
+                && description.equals(that.description) && channelId.equals(that.channelId)
+                && channelName.equals(that.channelName) && Objects.equals(addedToWl, that.addedToWl)
+                && Objects.equals(addedToLl, that.addedToLl);
     }
 
     @Override
