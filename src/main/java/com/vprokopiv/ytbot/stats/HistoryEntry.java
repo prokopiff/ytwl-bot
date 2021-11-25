@@ -36,7 +36,11 @@ public class HistoryEntry {
 
     private Long addedToLl;
 
+    @Column(nullable = false)
+    private Long created;
+
     public HistoryEntry() {
+        created = System.currentTimeMillis();
     }
 
     public HistoryEntry(String id,
@@ -47,6 +51,7 @@ public class HistoryEntry {
                         String channelName,
                         Long addedToWl,
                         Long addedToLl) {
+        this();
         this.id = id;
         this.title = title;
         this.durationSeconds = durationSeconds;
@@ -70,6 +75,7 @@ public class HistoryEntry {
 
     private HistoryEntry(
             String id, String title, String description, String channelId, String channelName, Long duration) {
+        this();
         this.id = id;
         this.title = title;
         this.description = description;
@@ -140,6 +146,14 @@ public class HistoryEntry {
 
     public void setAddedToLl(Long addedToLl) {
         this.addedToLl = addedToLl;
+    }
+
+    public Long getCreated() {
+        return created;
+    }
+
+    public void setCreated(Long created) {
+        this.created = created;
     }
 
     @Override
