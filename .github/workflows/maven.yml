@@ -38,7 +38,7 @@ jobs:
         if: success() && !contains(github.ref, 'main')
         with:
           push: false
-          build-args: REFRESHED_AT=$(date +%Y-%m-%d) ARCH=amd64
+          build-args: ARCH=amd64
           platforms: linux/amd64
           tags: vprokopiv/ytbot:latest
 
