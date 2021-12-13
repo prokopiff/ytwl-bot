@@ -52,8 +52,7 @@ public class Telegram {
                     .callbackData("WL" + video.id());
             var toLlButton = new InlineKeyboardButton("Add to LL")
                     .callbackData("LL" + video.id());
-            var message = new SendMessage(config.getChatId(),
-                    "%s\n%s\n\n%s".formatted(video.channel().title(), formatDuration(video.duration()), video.getUrl()))
+            var message = new SendMessage(config.getChatId(), video.toMessageString())
                     .replyMarkup(new InlineKeyboardMarkup(toWlButton, toLlButton));
             bot.execute(message);
         });
