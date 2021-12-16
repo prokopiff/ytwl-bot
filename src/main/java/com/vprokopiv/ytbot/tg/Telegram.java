@@ -5,6 +5,7 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.config.Config;
@@ -16,8 +17,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.function.Consumer;
-
-import static com.vprokopiv.ytbot.util.Util.formatDuration;
 
 @Component
 @Profile("!test")
@@ -53,6 +52,7 @@ public class Telegram {
             var toLlButton = new InlineKeyboardButton("Add to LL")
                     .callbackData("LL" + video.id());
             var message = new SendMessage(config.getChatId(), video.toMessageString())
+                    .parseMode(ParseMode.Markdown)
                     .replyMarkup(new InlineKeyboardMarkup(toWlButton, toLlButton));
             bot.execute(message);
         });

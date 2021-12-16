@@ -17,7 +17,7 @@ public record Video(String id, String title, String description, Channel channel
     }
 
     public String toMessageString() {
-        return "%s\n%s\n%s\n\n%s".formatted(
+        return "*%s*\n%s\n%s\n\n%s".formatted(
                 this.title(),
                 this.channel().title(),
                 formatDuration(this.duration()),
