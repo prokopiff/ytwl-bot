@@ -74,7 +74,7 @@ public class PeriodicJob  {
             Map<String, HistoryEntry> history = new HashMap<>();
             long lastRunTs = lastRun();
 
-            if (lastRunTs > System.currentTimeMillis() - Duration.ofHours(2).toMillis()) {
+            if (lastRunTs > System.currentTimeMillis() - Duration.ofMinutes(115).toMillis()) {
                 LOG.info("Last run was recently, skipping");
                 return;
             }
