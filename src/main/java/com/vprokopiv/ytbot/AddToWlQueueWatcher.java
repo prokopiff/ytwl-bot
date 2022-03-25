@@ -2,6 +2,7 @@ package com.vprokopiv.ytbot;
 
 import com.vprokopiv.ytbot.stats.HistoryService;
 import com.vprokopiv.ytbot.yt.YouTubeService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -37,14 +38,27 @@ public class AddToWlQueueWatcher {
         executorService.submit(new Thread(() -> {
             while (true) {
                 try {
-                    var message = queuesManager.takeAddToWlMessage().get();
-                    var id = message.substring(WL.length());
-                    if (message.startsWith(WL)) {
-                        youTubeService.addToWL(id);
-                        historyService.setAddedToWl(id);
-                    } else {
-                        youTubeService.addToLL(id);
-                        historyService.setAddedToLl(id);
+                    var update = queuesManager.takeAddToWlMessage().get();
+                    
+                    switch (update.updateType()) {
+                        case WL_ADD:
+                            youTubeService.addToWL(update.videoId());
+                            historyService.setAddedToWl(update.videoId());
+                            break;
+                        case WL_REMOVE:
+                            youTubeService.removeFromWL(update.videoId());
+                            historyService.setRemovedFromWL(update.videoId());
+                            break;
+                        case LL_ADD:
+                            youTubeService.addToLL(update.videoId());
+                            historyService.setAddedToLl(update.videoId());
+                            break;
+                        case LL_REMOVE:
+                            youTubeService.removeFromLL(update.videoId());
+                            historyService.setRemovedFromLL(update.videoId());
+                            break;
+                        default:
+                            LOG.warn("Unknown update type: {}", update.updateType());
                     }
                 } catch (Exception e) {
                     LOG.warn(e.getMessage(), e);

@@ -1,6 +1,8 @@
 package com.vprokopiv.ytbot;
 
 import com.pengrad.telegrambot.request.SendMessage;
+import com.vprokopiv.ytbot.yt.model.WlUpdate;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -16,7 +18,7 @@ public class QueuesManager {
     private static final Logger LOG = LoggerFactory.getLogger(QueuesManager.class);
 
     private final BlockingQueue<SendMessage> tgMessagesQueue = new ArrayBlockingQueue<>(20);
-    private final BlockingQueue<String> addToWlQueue = new ArrayBlockingQueue<>(20);
+    private final BlockingQueue<WlUpdate> addToWlQueue = new ArrayBlockingQueue<>(20);
 
     public void putTgMessage(SendMessage message) {
         try {
@@ -38,16 +40,18 @@ public class QueuesManager {
         });
     }
 
-    public void putAddToWlMessage(String message) {
+    public WlUpdate putWlUpdateMessage(String message) {
         try {
-            addToWlQueue.put(message);
+            WlUpdate update = WlUpdate.of(message);
+            addToWlQueue.put(update);
+            return update;
         } catch (InterruptedException e) {
             LOG.warn(e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }
 
-    public CompletableFuture<String> takeAddToWlMessage() {
+    public CompletableFuture<WlUpdate> takeAddToWlMessage() {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return addToWlQueue.take();

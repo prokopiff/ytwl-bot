@@ -49,6 +49,23 @@ public class HistoryService {
             historyRepository.save(e);
         }, () -> LOG.warn("Can't add to WL a video [{}] that doesn't exist", id));
     }
+
+    public void setRemovedFromWL(String videoId) {
+        Optional<HistoryEntry> entry = historyRepository.findById(videoId);
+        entry.ifPresentOrElse(e -> {
+            e.setAddedToWl(null);
+            historyRepository.save(e);
+        }, () -> LOG.warn("Can't remove from WL a video [{}] that doesn't exist", videoId));
+    }
+
+    public void setRemovedFromLL(String videoId) {
+        Optional<HistoryEntry> entry = historyRepository.findById(videoId);
+        entry.ifPresentOrElse(e -> {
+            e.setAddedToLl(null);
+            historyRepository.save(e);
+        }, () -> LOG.warn("Can't remove from LL a video [{}] that doesn't exist", videoId));
+    }
+
     public void setAddedToLl(String id) {
         Optional<HistoryEntry> entry = historyRepository.findById(id);
         entry.ifPresentOrElse(e -> {

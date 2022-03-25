@@ -13,7 +13,6 @@ import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.Activity;
 import com.google.api.services.youtube.model.ActivityListResponse;
 import com.google.api.services.youtube.model.PlaylistItem;
-import com.google.api.services.youtube.model.PlaylistItemContentDetails;
 import com.google.api.services.youtube.model.PlaylistItemSnippet;
 import com.google.api.services.youtube.model.ResourceId;
 import com.google.api.services.youtube.model.Subscription;
@@ -33,7 +32,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -151,14 +149,29 @@ public class YouTubeService {
         addToList(videoId, config.getWlPlaylistId());
     }
 
+    public void removeFromWL(String videoId) throws IOException {
+        LOG.debug("Removing {} from WL", videoId);
+        removeFromList(videoId, config.getWlPlaylistId());
+    }
+
     public void addToLL(String videoId) throws IOException {
         LOG.debug("Adding {} to LL", videoId);
         addToList(videoId, config.getLlPlaylistId());
     }
 
+    public void removeFromLL(String videoId) throws IOException {
+        LOG.debug("Removing {} from LL", videoId);
+        removeFromList(videoId, config.getLlPlaylistId());
+    }
+
     private void addToList(String videoId, String playlistId) throws IOException {
-        Set<String> wl = getCurrentList(playlistId);
-        if (wl.contains(videoId)) {
+        Map<String, String> wl = Map.of();
+        if (config.isCheckWlDuplicates()) {
+            wl = getCurrentList(playlistId);
+        } else {
+            LOG.debug("Not getting current list");
+        }
+        if (wl.keySet().contains(videoId)) {
             LOG.debug("Already in list");
         } else {
             var snippet = new PlaylistItemSnippet()
@@ -175,12 +188,23 @@ public class YouTubeService {
         }
     }
 
-    private Set<String> getCurrentList(String playlistId) throws IOException {
-        if (!config.isCheckWlDuplicates()) {
-            LOG.debug("Not getting current list");
-            return Set.of();
+    private void removeFromList(String videoId, String playlistId) throws IOException {
+        var itemId = getCurrentList(playlistId).get(videoId);
+        if (itemId == null) {
+            LOG.info("{} is not in the list", videoId);
+        } else {
+            LOG.info("Removing {} from list", videoId);
+            service.playlistItems()
+                    .delete(itemId)
+                    .execute();
         }
+    }
 
+    /**
+     * @param playlistId
+     * @return Map of videoId -> playlistItemId
+     */
+    private Map<String, String> getCurrentList(String playlistId) throws IOException {
         LOG.debug("Getting current list");
         var requqest = service.playlistItems()
                 .list(List.of(SNIPPET, CONTENT_DETAILS))
@@ -194,9 +218,10 @@ public class YouTubeService {
         }
         return result
                 .stream()
-                .map(PlaylistItem::getContentDetails)
-                .map(PlaylistItemContentDetails::getVideoId)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toMap(
+                        item -> item.getSnippet().getResourceId().getVideoId(),
+                        PlaylistItem::getId
+                ));
     }
 
     public Map<String, Duration> getDurations(List<String> ids) throws IOException {
