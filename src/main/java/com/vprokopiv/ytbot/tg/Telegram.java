@@ -6,7 +6,7 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.model.request.ParseMode;
-import com.pengrad.telegrambot.request.AnswerCallbackQuery;
+import com.pengrad.telegrambot.request.EditMessageReplyMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.config.Config;
 import com.vprokopiv.ytbot.yt.model.Video;
@@ -35,8 +35,8 @@ public class Telegram {
             updates.forEach(update -> {
                 if (update.callbackQuery() != null) {
                     addToWlHandler.accept(update.callbackQuery().data());
-                    bot.execute(new AnswerCallbackQuery(update.callbackQuery().id())
-                            .text("\u2713") // Checkmark
+                    bot.execute(
+                        new EditMessageReplyMarkup(config.getChatId(), update.callbackQuery().message().messageId())
                     );
                 }
             });
