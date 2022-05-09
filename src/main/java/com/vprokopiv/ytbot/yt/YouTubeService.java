@@ -220,7 +220,8 @@ public class YouTubeService {
                 .stream()
                 .collect(Collectors.toMap(
                         item -> item.getSnippet().getResourceId().getVideoId(),
-                        PlaylistItem::getId
+                        PlaylistItem::getId,
+                        (a, b) -> a
                 ));
     }
 
