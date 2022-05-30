@@ -67,7 +67,7 @@ public class PeriodicJob  {
         scheduled();
     }
 
-    @Scheduled(cron = "0 0 0,9-23/2 * * *")
+    @Scheduled(cron = "0 12 0,9-23/2 * * *")
     public void scheduled() {
         try {
             LOG.info("Updating...");
