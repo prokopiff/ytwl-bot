@@ -26,7 +26,7 @@ services:
 ```
 
 ## Manual Installation
-Fill empty values in `app.properties`, `client_secrets.json`
+Fill empty values in `app.properties`
 
 ```shell
 mvn package
