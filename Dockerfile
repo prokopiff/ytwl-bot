@@ -2,7 +2,7 @@
 # docker push vprokopiv/ytbot:latest
 
 ARG ARCH=
-FROM ${ARCH}/adoptopenjdk:16-jre
+FROM ${ARCH}/openjdk:18
 
 WORKDIR /
 ARG JAR_FILE=target/ytbot.jar

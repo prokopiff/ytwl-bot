@@ -65,7 +65,7 @@ public class YouTubeService {
         this.service = getService(sendMessageHandler);
     }
 
-    private Credential authorize(Consumer<String> sendMessageHandler) throws IOException {
+    private Credential authorize(Consumer<String> sendMessageHandler) {
         LOG.debug("Authorising");
         // Load client secrets.
         GoogleClientSecrets clientSecrets = secretsConfig.getSecrets();
@@ -171,7 +171,7 @@ public class YouTubeService {
         } else {
             LOG.debug("Not getting current list");
         }
-        if (wl.keySet().contains(videoId)) {
+        if (wl.containsKey(videoId)) {
             LOG.debug("Already in list");
         } else {
             var snippet = new PlaylistItemSnippet()
