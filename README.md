@@ -9,7 +9,7 @@ version: "3.8"
 services:
   ytbot:
     container_name: ytbot
-    image: vprokopiv/ytbot:arm32v7 # or :amd64, :arm64
+    image: vprokopiv/ytbot:amd64 # or :arm64
     environment:
       - "BOT_TOKEN=<telegram bot token>"
       - "BOT_CHAT_ID=<id of a chat with yourself>"
