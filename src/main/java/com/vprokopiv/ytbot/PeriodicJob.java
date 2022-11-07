@@ -97,6 +97,7 @@ public class PeriodicJob  {
             List<Video> videos = activities
                     .sorted(ACTIVITY_COMPARATOR)
                     .filter(a -> "upload".equals(a.getSnippet().getType()))
+                    .filter(a -> a.getSnippet().getChannelTitle() != null)
                     .map(activity -> new Video(
                             activity.getContentDetails().getUpload().getVideoId(),
                             activity.getSnippet().getTitle(),
