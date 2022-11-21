@@ -39,7 +39,6 @@ public class PeriodicJob  {
     private static final Logger LOG = LoggerFactory.getLogger(PeriodicJob.class);
 
     private static final ZoneOffset ZONE_OFFSET = OffsetDateTime.now().getOffset();
-    public static final String LAST_RUN_FILE = "last-run.txt";
     public static final Comparator<Activity> ACTIVITY_COMPARATOR = Comparator.comparing(a -> a.getSnippet()
             .getPublishedAt().getValue());
     public static final long TWENTY_FOUR_HRS = Duration.ofHours(24L).toMillis();
@@ -108,7 +107,8 @@ public class PeriodicJob  {
                             new Channel(
                                     activity.getSnippet().getChannelId(),
                                     channelIdToName.get(activity.getSnippet().getChannelId())),
-                            null))
+                            null,
+                            activity.getSnippet().getPublishedAt().getValue()))
                     .toList();
 
             LOG.info("Got {} videos", videos.size());
