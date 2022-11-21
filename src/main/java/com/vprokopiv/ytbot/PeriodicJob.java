@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 
 import static com.vprokopiv.ytbot.util.Util.getFixedSizeTitle;
 import static com.vprokopiv.ytbot.util.Util.stringStackTrace;
+import static java.util.stream.Collectors.toMap;
 
 @Profile("!test")
 @Component
@@ -85,6 +86,9 @@ public class PeriodicJob  {
             List<Channel> subs = youTubeService.getSubscriptions();
             LOG.info("Got {} subscriptions", subs.size());
 
+            Map<String, String> channelIdToName = subs.stream()
+                    .collect(toMap(Channel::id, Channel::title));
+
             Stream<Activity> activities = subs.parallelStream().flatMap(channel -> {
                 List<Activity> channelActivities = youTubeService.getActivities(channel.id(), after);
                 var titleLog = getFixedSizeTitle(channel);
@@ -103,7 +107,7 @@ public class PeriodicJob  {
                             activity.getSnippet().getDescription(),
                             new Channel(
                                     activity.getSnippet().getChannelId(),
-                                    activity.getSnippet().getChannelTitle()),
+                                    channelIdToName.get(activity.getSnippet().getChannelId())),
                             null))
                     .toList();
 
