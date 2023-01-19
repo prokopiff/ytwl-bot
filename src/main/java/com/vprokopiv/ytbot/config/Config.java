@@ -13,6 +13,7 @@ public class Config {
     private String wlPlaylistId;
     private String llPlaylistId;
     private boolean checkWlDuplicates = true;
+    private boolean disableShorts;
 
     private String secretsLocation;
 
@@ -54,6 +55,14 @@ public class Config {
 
     public void setCheckWlDuplicates(boolean checkWlDuplicates) {
         this.checkWlDuplicates = checkWlDuplicates;
+    }
+
+    public boolean isDisableShorts() {
+        return disableShorts;
+    }
+
+    public void setDisableShorts(boolean disableShorts) {
+        this.disableShorts = disableShorts;
     }
 
     public Optional<String> getSecretsLocation() {

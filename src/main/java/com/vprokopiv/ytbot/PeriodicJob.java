@@ -2,6 +2,7 @@ package com.vprokopiv.ytbot;
 
 import com.google.api.client.util.DateTime;
 import com.google.api.services.youtube.model.Activity;
+import com.vprokopiv.ytbot.config.Config;
 import com.vprokopiv.ytbot.state.StateManager;
 import com.vprokopiv.ytbot.stats.HistoryEntry;
 import com.vprokopiv.ytbot.stats.HistoryService;
@@ -49,17 +50,19 @@ public class PeriodicJob  {
     private final QueuesManager queuesManager;
     private final HistoryService historyService;
     private final StateManager stateManager;
+    private final Config config;
 
     public PeriodicJob(Telegram telegram,
                        YouTubeService youTubeService,
                        QueuesManager queuesManager,
                        HistoryService historyService,
-                       StateManager stateManager) {
+                       StateManager stateManager, Config config) {
         this.telegram = telegram;
         this.youTubeService = youTubeService;
         this.queuesManager = queuesManager;
         this.historyService = historyService;
         this.stateManager = stateManager;
+        this.config = config;
     }
 
     @PostConstruct
@@ -121,6 +124,7 @@ public class PeriodicJob  {
                             var duration = Optional.ofNullable(durations.get(vid.id()));
                             return new Video(vid, duration.map(Duration::toSeconds).orElse(null));
                         })
+                        .filter(v -> !config.isDisableShorts() || v.duration() > 60)
                         .toList();
                 videos.forEach(video -> history.put(video.id(), new HistoryEntry(video)));
             } finally {
