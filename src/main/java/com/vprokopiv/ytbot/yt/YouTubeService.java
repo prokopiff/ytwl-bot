@@ -21,6 +21,7 @@ import com.google.api.services.youtube.model.Video;
 import com.vprokopiv.ytbot.config.Config;
 import com.vprokopiv.ytbot.config.GoogleSecretsConfig;
 import com.vprokopiv.ytbot.yt.model.Channel;
+import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -38,6 +39,7 @@ import java.util.stream.Collectors;
 @Component
 @Profile("!test")
 public class YouTubeService {
+
     private static final Logger LOG = LoggerFactory.getLogger(YouTubeService.class);
 
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
@@ -48,11 +50,14 @@ public class YouTubeService {
     public static final long PAGE_SIZE = 25L;
     public static final String CONTENT_DETAILS = "contentDetails";
     public static final String SNIPPET = "snippet";
+    public static final String CACHED = "CACHED";
 
     private final YouTube service;
     private final MapDataStoreFactory mapDataStoreFactory;
     private final GoogleSecretsConfig secretsConfig;
     private final Config config;
+
+    private final Map<String, Map<String, String>> playlistCache = new HashMap<>();
 
     private YouTubeService(Consumer<String> sendMessageHandler,
                            Config config,
@@ -184,6 +189,7 @@ public class YouTubeService {
             service.playlistItems()
                     .insert(List.of(SNIPPET), new PlaylistItem().setSnippet(snippet))
                     .execute();
+            playlistCache.get(playlistId).put(videoId, CACHED);
             LOG.info("List entry added");
         }
     }
@@ -193,10 +199,16 @@ public class YouTubeService {
         if (itemId == null) {
             LOG.info("{} is not in the list", videoId);
         } else {
+            if (itemId.equals(CACHED)) {
+                LOG.debug("Item is from cache, need to refresh to remove");
+                refreshCache(playlistId);
+                itemId = playlistCache.get(playlistId).get(videoId);
+            }
             LOG.info("Removing {} from list", videoId);
             service.playlistItems()
                     .delete(itemId)
                     .execute();
+            playlistCache.get(playlistId).remove(videoId);
         }
     }
 
@@ -206,9 +218,17 @@ public class YouTubeService {
      */
     private Map<String, String> getCurrentList(String playlistId) throws IOException {
         LOG.debug("Getting current list");
+        if (!playlistCache.containsKey(playlistId)) {
+            refreshCache(playlistId);
+        }
+        return playlistCache.get(playlistId);
+    }
+
+    private void refreshCache(String playlistId) throws IOException {
+        LOG.debug("Refreshing cache for {}", playlistId);
         var requqest = service.playlistItems()
-                .list(List.of(SNIPPET, CONTENT_DETAILS))
-                .setPlaylistId(playlistId);
+            .list(List.of(SNIPPET, CONTENT_DETAILS))
+            .setPlaylistId(playlistId);
         var response = requqest.execute();
         List<PlaylistItem> result = new ArrayList<>(response.getItems());
         while (response.getNextPageToken() != null) {
@@ -216,13 +236,16 @@ public class YouTubeService {
             response = requqest.execute();
             result.addAll(response.getItems());
         }
-        return result
+        playlistCache.put(playlistId,
+            result
                 .stream()
                 .collect(Collectors.toMap(
-                        item -> item.getSnippet().getResourceId().getVideoId(),
-                        PlaylistItem::getId,
-                        (a, b) -> a
-                ));
+                    item -> item.getSnippet().getResourceId().getVideoId(),
+                    PlaylistItem::getId,
+                    (a, b) -> a,
+                    HashMap::new
+                ))
+        );
     }
 
     public Map<String, Duration> getDurations(List<String> ids) throws IOException {
