@@ -124,7 +124,7 @@ public class PeriodicJob  {
                             var duration = Optional.ofNullable(durations.get(vid.id()));
                             return new Video(vid, duration.map(Duration::toSeconds).orElse(null));
                         })
-                        .filter(v -> !config.isDisableShorts() || v.duration() > 60)
+                        .filter(v -> !config.isDisableShorts() || v.duration() == null || v.duration() > 60)
                         .toList();
                 videos.forEach(video -> history.put(video.id(), new HistoryEntry(video)));
             } finally {
