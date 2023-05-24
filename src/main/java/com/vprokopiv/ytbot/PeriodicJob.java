@@ -10,13 +10,13 @@ import com.vprokopiv.ytbot.tg.Telegram;
 import com.vprokopiv.ytbot.yt.YouTubeService;
 import com.vprokopiv.ytbot.yt.model.Channel;
 import com.vprokopiv.ytbot.yt.model.Video;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;

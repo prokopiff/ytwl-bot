@@ -1,12 +1,11 @@
 package com.vprokopiv.ytbot.stats;
 
 import com.vprokopiv.ytbot.yt.model.Video;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Lob;
-import javax.persistence.Table;
 import java.util.Objects;
 
 @Entity
@@ -22,8 +21,7 @@ public class HistoryEntry {
 
     private Long durationSeconds;
 
-    @Column(nullable = false)
-    @Lob
+    @Column(nullable = false, length = 10_000)
     private String description;
 
     @Column(nullable = false)

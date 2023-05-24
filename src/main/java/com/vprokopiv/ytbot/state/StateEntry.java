@@ -1,10 +1,9 @@
 package com.vprokopiv.ytbot.state;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Lob;
-import javax.persistence.Table;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "state")
@@ -14,8 +13,7 @@ public class StateEntry {
     @Column(name = "entry_key")
     private String key;
 
-    @Column(nullable = false, name = "entry_value")
-    @Lob
+    @Column(nullable = false, name = "entry_value", length = 10_000)
     private String value;
 
     public StateEntry() {
