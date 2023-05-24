@@ -40,8 +40,9 @@ public class PeriodicJob  {
     private static final Logger LOG = LoggerFactory.getLogger(PeriodicJob.class);
 
     private static final ZoneOffset ZONE_OFFSET = OffsetDateTime.now().getOffset();
-    public static final Comparator<Activity> ACTIVITY_COMPARATOR = Comparator.comparing(a -> a.getSnippet()
-            .getPublishedAt().getValue());
+    public static final Comparator<Activity> ACTIVITY_COMPARATOR = Comparator.comparing(a ->
+            a.getSnippet().getChannelTitle() + "|" + a.getSnippet().getPublishedAt().getValue()
+    );
     public static final long TWENTY_FOUR_HRS = Duration.ofHours(24L).toMillis();
     static final String LAST_RUN_TS = "last_run_ts";
 
@@ -124,7 +125,7 @@ public class PeriodicJob  {
                             var duration = Optional.ofNullable(durations.get(vid.id()));
                             return new Video(vid, duration.map(Duration::toSeconds).orElse(null));
                         })
-                        .filter(v -> !config.isDisableShorts() || v.duration() == null || v.duration() > 60)
+                        .filter(v -> !config.isDisableShorts() || v.duration() == null || v.duration() > 61)
                         .toList();
                 videos.forEach(video -> history.put(video.id(), new HistoryEntry(video)));
             } finally {
