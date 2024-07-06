@@ -38,4 +38,4 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Buildx Update
-        run: sh update-images.sh ${{ github.head_ref }}
+        run: sh update-images.sh
