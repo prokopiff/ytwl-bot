@@ -3,6 +3,7 @@ name: buildx
 on:
   push:
     branches: [ main ]
+  pull_request:
 
 jobs:
   buildx:
@@ -20,10 +21,10 @@ jobs:
       - name: Available platforms
         run: echo ${{ steps.buildx.outputs.platforms }}
     
-      - name: Setup Java 20
+      - name: Setup Java 22
         uses: actions/setup-java@v2
         with:
-          java-version: '20'
+          java-version: '22'
           distribution: 'zulu'
           cache: maven
         
@@ -38,4 +39,4 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Buildx Update
-        run: sh update-images.sh
+        run: sh update-images.sh ${{ github.head_ref }}
