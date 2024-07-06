@@ -213,7 +213,7 @@ public class YouTubeService {
     }
 
     /**
-     * @param playlistId
+     * @param playlistId - playlist id
      * @return Map of videoId -> playlistItemId
      */
     private Map<String, String> getCurrentList(String playlistId) throws IOException {

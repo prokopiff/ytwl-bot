@@ -3,9 +3,6 @@ package com.vprokopiv.ytbot;
 import com.google.api.client.util.DateTime;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PeriodicJobTest {
