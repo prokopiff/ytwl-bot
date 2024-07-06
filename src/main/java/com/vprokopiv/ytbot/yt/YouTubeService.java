@@ -268,7 +268,11 @@ public class YouTubeService {
             response = request.execute();
             result.addAll(response.getItems());
         }
-        return result.stream().collect(Collectors.toMap(
+        return result.stream()
+            .filter(v -> v.getContentDetails() != null)
+            .filter(v -> v.getContentDetails().getDuration() != null)
+            .filter(v -> !v.getContentDetails().getDuration().isEmpty())
+            .collect(Collectors.toMap(
                 Video::getId,
                 v -> Duration.parse(v.getContentDetails().getDuration())));
     }
