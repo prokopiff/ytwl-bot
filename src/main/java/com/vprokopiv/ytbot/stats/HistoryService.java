@@ -1,5 +1,9 @@
 package com.vprokopiv.ytbot.stats;
 
+import java.time.Duration;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -12,6 +16,9 @@ import java.util.Optional;
 public class HistoryService {
     private static final Logger LOG = LoggerFactory.getLogger(HistoryService.class);
     private final HistoryRepository historyRepository;
+
+    private final Set<String> rarelyWatchedChannelsCache = new HashSet<>();
+    private long rwcUpdateTime = 0;
 
     public HistoryService(HistoryRepository historyRepository) {
         this.historyRepository = historyRepository;
@@ -88,5 +95,24 @@ public class HistoryService {
 
     public Iterable<HistoryEntry> getAll() {
         return historyRepository.findAll();
+    }
+
+    public Set<String> getRarelyWatchedChannels(int maxAddedPct) {
+        if (rarelyWatchedChannelsCache.isEmpty()
+            || rwcUpdateTime < System.currentTimeMillis() - Duration.ofDays(1).toMillis()) {
+            rarelyWatchedChannelsCache.clear();
+            rwcUpdateTime = System.currentTimeMillis();
+
+            Map<String, Float> channelsWatchPct = historyRepository.getChannelsWatchPct();
+            channelsWatchPct.replaceAll((k, v) -> {
+                if (v < maxAddedPct / 100.) {
+                    return v;
+                }
+                return null;
+            });
+            rarelyWatchedChannelsCache.addAll(channelsWatchPct.keySet());
+        }
+
+        return new HashSet<>(rarelyWatchedChannelsCache);
     }
 }

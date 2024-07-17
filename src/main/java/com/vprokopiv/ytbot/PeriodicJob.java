@@ -11,6 +11,7 @@ import com.vprokopiv.ytbot.yt.YouTubeService;
 import com.vprokopiv.ytbot.yt.model.Channel;
 import com.vprokopiv.ytbot.yt.model.Video;
 import jakarta.annotation.PostConstruct;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -101,6 +102,8 @@ public class PeriodicJob  {
 
             var runTs = System.currentTimeMillis();
 
+            Set<String> rarelyWatchedChannels = historyService.getRarelyWatchedChannels(20);
+
             List<Video> videos = activities
                     .sorted(ACTIVITY_COMPARATOR)
                     .filter(a -> "upload".equals(a.getSnippet().getType()))
@@ -112,7 +115,8 @@ public class PeriodicJob  {
                                     activity.getSnippet().getChannelId(),
                                     channelIdToName.get(activity.getSnippet().getChannelId())),
                             null,
-                            activity.getSnippet().getPublishedAt().getValue()))
+                            activity.getSnippet().getPublishedAt().getValue(),
+                            rarelyWatchedChannels.contains(activity.getSnippet().getChannelId())))
                     .toList();
 
             LOG.info("Got {} videos", videos.size());
