@@ -1,5 +1,6 @@
 package com.vprokopiv.ytbot.stats;
 
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 class HistoryServiceTest {
@@ -38,6 +40,14 @@ class HistoryServiceTest {
         entry.setAddedToWl(1L);
         historyService.update(entry);
         assertEquals(1L, historyService.findById(entry.getId()).get().getAddedToWl());
+    }
+
+    @Test
+    void testGetRarelyWatched() {
+        historyService.save(getTestEntry());
+        Set<String> rarelyWatchedChannels = historyService.getRarelyWatchedChannels(100);
+        assertEquals(1, rarelyWatchedChannels.size());
+        assertTrue(rarelyWatchedChannels.contains("channelName-id"));
     }
 
     private HistoryEntry getTestEntry() {

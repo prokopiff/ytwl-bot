@@ -1,9 +1,10 @@
 package com.vprokopiv.ytbot.stats;
 
-import java.util.Map;
+import java.util.Set;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -28,7 +29,13 @@ public interface HistoryRepository extends PagingAndSortingRepository<HistoryEnt
         WITH counts AS (
           SELECT
             channel_id,
-            sum(if(added_to_wl IS NOT NULL OR added_to_ll IS NOT NULL, 1, 0)) AS added,
+            sum(
+              CASE
+                WHEN added_to_wl IS NOT NULL OR added_to_ll IS NOT NULL
+                  THEN 1
+                ELSE 0
+              END
+            ) AS added,
             count(*) AS total
           FROM
             history
@@ -37,12 +44,12 @@ public interface HistoryRepository extends PagingAndSortingRepository<HistoryEnt
         )
     
         SELECT
-          channel_id,
-          added * 1.0 / total
+          channel_id
         FROM
           counts
         WHERE
           total > 0
+          AND (added * 1.0 / total) < (:maxPct / 100.)
     """, nativeQuery = true)
-    Map<String, Float> getChannelsWatchPct();
+    Set<String> getRarelyWatchedChannels(@Param("maxPct") int maxPct);
 }

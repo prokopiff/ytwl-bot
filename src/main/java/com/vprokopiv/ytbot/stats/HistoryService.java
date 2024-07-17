@@ -2,7 +2,6 @@ package com.vprokopiv.ytbot.stats;
 
 import java.time.Duration;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,14 +102,8 @@ public class HistoryService {
             rarelyWatchedChannelsCache.clear();
             rwcUpdateTime = System.currentTimeMillis();
 
-            Map<String, Float> channelsWatchPct = historyRepository.getChannelsWatchPct();
-            channelsWatchPct.replaceAll((k, v) -> {
-                if (v < maxAddedPct / 100.) {
-                    return v;
-                }
-                return null;
-            });
-            rarelyWatchedChannelsCache.addAll(channelsWatchPct.keySet());
+            Set<String> channelsWatchPct = historyRepository.getRarelyWatchedChannels(maxAddedPct);
+            rarelyWatchedChannelsCache.addAll(channelsWatchPct);
         }
 
         return new HashSet<>(rarelyWatchedChannelsCache);
