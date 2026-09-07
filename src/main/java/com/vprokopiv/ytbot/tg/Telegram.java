@@ -9,6 +9,7 @@ import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.EditMessageReplyMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.vprokopiv.ytbot.config.Config;
+import com.vprokopiv.ytbot.yt.model.Channel;
 import com.vprokopiv.ytbot.yt.model.Video;
 import com.vprokopiv.ytbot.yt.model.WlUpdate;
 
@@ -18,7 +19,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @Profile("!test")
@@ -49,8 +52,7 @@ public class Telegram {
                             removeFromLL.callbackData(WlUpdate.of(WlUpdate.UpdateType.LL_REMOVE, wlUpdate.videoId()).toString());
                             markup = new InlineKeyboardMarkup(removeFromLL);
                             break;
-                        case WL_REMOVE:
-                        case LL_REMOVE:
+                        case WL_REMOVE, LL_REMOVE:
                             var addToWL = new InlineKeyboardButton("Add to WL");
                             addToWL.callbackData(WlUpdate.of(WlUpdate.UpdateType.WL_ADD, wlUpdate.videoId()).toString());
                             var addToLL = new InlineKeyboardButton("Add to LL");
@@ -70,8 +72,20 @@ public class Telegram {
     }
 
     public void sendVideos(List<Video> videos) {
+        LOG.info("Checking for spam messages");
+        Map<Channel, Integer> spamChannels = videos.stream()
+                .collect(Collectors.toMap(Video::channel, a -> 1, Integer::sum))
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() > 3)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
         LOG.info("Sending videos");
         videos.forEach(video -> {
+            if (spamChannels.containsKey(video.channel())) {
+                LOG.info("Skipping video {} from spam channel {}", video.id(), video.channel().title());
+                return;
+            }
             var toWlButton = new InlineKeyboardButton("Add to WL")
                     .callbackData(WlUpdate.of(WlUpdate.UpdateType.WL_ADD, video.id()).toString());
             var toLlButton = new InlineKeyboardButton("Add to LL")
@@ -81,6 +95,12 @@ public class Telegram {
                     .replyMarkup(new InlineKeyboardMarkup(toWlButton, toLlButton));
             bot.execute(message);
         });
+        if (!spamChannels.isEmpty()) {
+            var spamMessage = "Some channels posted too many videos:\n" + spamChannels.entrySet().stream()
+                    .map(entry -> entry.getKey().title() + " (" + entry.getValue() + " videos)")
+                    .collect(Collectors.joining("\n"));
+            sendMessage(spamMessage);
+        }
     }
 
     public void sendMessage(SendMessage msg) {
